@@ -1,0 +1,19 @@
+# OS/editor temp files
+*.swp
+*~
+/.~lock*
+
+# Local reference/import files in repository root
+/umsaetze*.csv
+
+# Java build outputs
+**/target/
+
+# Local database files
+*.db
+
+# IDE metadata
+**/.idea/
+**/.classpath
+**/.project
+**/.settings/

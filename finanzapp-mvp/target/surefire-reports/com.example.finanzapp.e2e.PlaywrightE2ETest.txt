@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.example.finanzapp.e2e.PlaywrightE2ETest
--------------------------------------------------------------------------------
-Tests run: 16, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 25.86 s -- in com.example.finanzapp.e2e.PlaywrightE2ETest

@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.example.finanzapp.common.config.LocaleConfigIntegrationTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.695 s -- in com.example.finanzapp.common.config.LocaleConfigIntegrationTest
