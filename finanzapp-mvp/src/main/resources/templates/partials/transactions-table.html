@@ -1,0 +1,58 @@
+<div id="transactions-table" th:fragment="container">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th th:text="#{table.name}">Name</th>
+        <th th:text="#{table.date}">Date</th>
+        <th th:text="#{table.amount}">Amount</th>
+        <th th:text="#{table.actions}">Actions</th>
+      </tr>
+    </thead>
+    <tbody th:if="${transactionsEmpty}">
+      <tr>
+        <td colspan="4" class="empty-state" th:text="#{transactions.empty}">No transactions to show.</td>
+      </tr>
+    </tbody>
+    <tbody th:if="${!transactionsEmpty}">
+      <tr th:each="transaction : ${transactions}">
+        <td>
+          <div th:text="${transaction.name}">Name</div>
+          <div class="subtle" th:text="${transaction.purpose}">Verwendungszweck</div>
+        </td>
+        <td th:text="${transaction.date}">2026-02-01</td>
+        <td th:text="${transaction.amount}">-31.00 EUR</td>
+        <td>
+          <form
+              th:action="@{'/transactions/' + ${transaction.id} + '/delete'}"
+              method="post"
+              onsubmit="return confirm(this.dataset.confirm);"
+              th:attr="data-confirm=#{confirm.deleteTransaction}">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <button type="submit" th:text="#{transactions.delete}">Delete</button>
+          </form>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="table-pagination" th:if="${totalPages > 1}">
+    <form class="pagination-form" method="get" th:action="@{/transactions}" th:hx-get="@{/partials/transactions-table}" hx-target="#transactions-table" hx-swap="outerHTML">
+      <input type="hidden" name="nameContains" th:value="${nameContains}" />
+      <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
+      <input type="hidden" name="minAmount" th:value="${minAmount}" />
+      <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
+      <input type="hidden" name="page" th:value="${previousPage}" />
+      <button type="submit" th:disabled="${!hasPreviousPage}" th:text="#{transactions.previous}">Previous</button>
+    </form>
+
+    <span class="pagination-label" th:text="#{transactions.pageLabel(${currentPage + 1}, ${totalPages})}">Page 1 of 1</span>
+
+    <form class="pagination-form" method="get" th:action="@{/transactions}" th:hx-get="@{/partials/transactions-table}" hx-target="#transactions-table" hx-swap="outerHTML">
+      <input type="hidden" name="nameContains" th:value="${nameContains}" />
+      <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
+      <input type="hidden" name="minAmount" th:value="${minAmount}" />
+      <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
+      <input type="hidden" name="page" th:value="${nextPage}" />
+      <button type="submit" th:disabled="${!hasNextPage}" th:text="#{transactions.next}">Next</button>
+    </form>
+  </div>
+</div>

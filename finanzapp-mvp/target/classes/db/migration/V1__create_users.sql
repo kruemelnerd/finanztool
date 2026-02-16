@@ -1,0 +1,8 @@
+CREATE TABLE users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  email TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  display_name TEXT,
+  language TEXT NOT NULL DEFAULT 'EN',
+  created_at TIMESTAMP NOT NULL
+);

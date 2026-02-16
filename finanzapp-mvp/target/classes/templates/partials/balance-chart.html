@@ -1,0 +1,66 @@
+<div class="chart" th:if="${chartEmpty}">
+  <div class="empty-state" th:text="#{chart.empty}">No balance data available.</div>
+</div>
+
+<div class="chart" th:if="${!chartEmpty}">
+  <div class="chart-summary">
+    <span th:text="#{chart.latestBalance}">Latest balance</span>
+    <strong th:text="${chartLatestAmount}">0.00 EUR</strong>
+  </div>
+  <div class="line-chart-wrap">
+    <svg class="line-chart" viewBox="0 0 860 230" preserveAspectRatio="none" role="img" aria-label="Balance chart">
+      <defs>
+        <linearGradient id="line-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4ecda0" stop-opacity="0.35" />
+          <stop offset="100%" stop-color="#4ecda0" stop-opacity="0.03" />
+        </linearGradient>
+      </defs>
+
+      <g class="line-chart-grid">
+        <line th:each="tick : ${chartYAxisTicks}"
+              th:attr="x1=${chartPlotStartX}, y1=${tick.y}, x2=${chartPlotEndX}, y2=${tick.y}"></line>
+      </g>
+
+      <g class="line-chart-y-axis">
+        <text class="line-chart-axis-title" x="12" y="20" th:text="#{chart.yAxisLabel}">Balance (EUR)</text>
+        <text class="line-chart-y-tick"
+              th:each="tick : ${chartYAxisTicks}"
+              th:attr="x=${chartPlotStartX - 10}, y=${tick.y + 4}"
+              th:text="${tick.label}">0.00 EUR</text>
+      </g>
+
+      <path th:attr="d=${chartAreaPoints}" fill="url(#line-fill)"></path>
+      <path th:attr="d=${chartLinePoints}" fill="none" stroke="#27b788" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+
+      <g class="line-chart-markers">
+        <g class="line-chart-marker"
+           th:each="marker : ${chartDebitMarkers}"
+           tabindex="0"
+           th:attr="transform='translate(' + ${marker.x} + ',' + ${marker.y} + ')'">
+          <circle class="line-chart-marker-hit" r="11"></circle>
+          <circle class="line-chart-marker-dot" r="4"></circle>
+          <g class="line-chart-tooltip"
+             th:attr="transform='translate(' + ${marker.tooltipOffsetX} + ',' + ${marker.tooltipOffsetY} + ')'">
+            <rect rx="8"
+                  ry="8"
+                  th:attr="width=${marker.tooltipWidth}, height=${marker.tooltipHeight}"></rect>
+            <text class="line-chart-tooltip-title"
+                  x="10"
+                  y="18"
+                  th:text="#{chart.debitsOnDay(${marker.dayLabel})}">Debits on 01.01.2026</text>
+            <text class="line-chart-tooltip-line"
+                  th:each="entry, stat : ${marker.lines}"
+                  x="10"
+                  th:attr="y=${36 + (stat.index * 16)}"
+                  th:text="${entry}">12:00  Store  -12.00 EUR</text>
+          </g>
+        </g>
+      </g>
+    </svg>
+    <div class="line-chart-ticks">
+      <span th:text="${chartTickStart}">01.01</span>
+      <span th:text="${chartTickMiddle}">15.01</span>
+      <span th:text="${chartTickEnd}">30.01</span>
+    </div>
+  </div>
+</div>

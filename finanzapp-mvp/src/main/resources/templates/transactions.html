@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="transactions">
+    <div
+      class="notice"
+      th:if="${transactionMessage}"
+      th:classappend="${transactionStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${transactionMessage}">Transaction status</span>
+    </div>
+    <div class="current-balance">
+      <span th:text="#{transactions.currentBalance}">Current balance</span>
+      <strong th:text="${currentBalanceAmount} ?: #{transactions.noCurrentBalance}">No current balance available</strong>
+    </div>
+    <form class="filters" action="/transactions" method="get" hx-get="/partials/transactions-table" hx-target="#transactions-table" hx-trigger="submit" hx-swap="outerHTML">
+      <label>
+        <span th:text="#{transactions.nameContains}">Name contains</span>
+        <input type="text" name="nameContains" th:placeholder="#{transactions.namePlaceholder}" th:value="${nameContains}" />
+      </label>
+      <label>
+        <span th:text="#{transactions.purposeContains}">Purpose contains</span>
+        <input type="text" name="purposeContains" th:placeholder="#{transactions.purposePlaceholder}" th:value="${purposeContains}" />
+      </label>
+      <label>
+        <span th:text="#{transactions.minAmount}">Min amount</span>
+        <input type="number" step="0.01" name="minAmount" th:placeholder="#{transactions.minAmountPlaceholder}" th:value="${minAmount}" />
+      </label>
+      <label>
+        <span th:text="#{transactions.maxAmount}">Max amount</span>
+        <input type="number" step="0.01" name="maxAmount" th:placeholder="#{transactions.maxAmountPlaceholder}" th:value="${maxAmount}" />
+      </label>
+      <div class="filter-actions">
+        <button type="submit" th:text="#{transactions.apply}">Apply</button>
+        <a class="button-link" th:href="@{/transactions}" th:text="#{transactions.reset}">Reset filters</a>
+      </div>
+    </form>
+    <div id="transactions-table" th:replace="~{partials/transactions-table :: container}"></div>
+  </section>
+</html>

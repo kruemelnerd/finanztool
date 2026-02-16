@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.finanzapp.repository.CsvArtifactRepositoryIntegrationTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.893 s -- in com.example.finanzapp.repository.CsvArtifactRepositoryIntegrationTest

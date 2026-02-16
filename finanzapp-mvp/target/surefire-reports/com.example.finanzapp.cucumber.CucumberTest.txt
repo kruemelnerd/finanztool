@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.example.finanzapp.cucumber.CucumberTest
+-------------------------------------------------------------------------------
+Tests run: 26, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.727 s -- in com.example.finanzapp.cucumber.CucumberTest

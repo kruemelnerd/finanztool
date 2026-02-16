@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="settings">
+    <div
+      class="notice"
+      th:if="${csvImportMessage}"
+      th:classappend="${csvImportStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${csvImportMessage}">CSV import status</span>
+    </div>
+    <div
+      class="notice"
+      th:if="${settingsMessage}"
+      th:classappend="${settingsStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${settingsMessage}">Settings status</span>
+    </div>
+    <div class="modal-backdrop" id="duplicate-modal" th:if="${csvImportDuplicates}" data-open="true" onclick="if (event.target === this) { closeDuplicateModal(); }">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title">
+        <div class="modal-title" id="duplicate-modal-title" th:text="#{csv.duplicates.title}">Duplicate transactions detected</div>
+        <p class="modal-copy">
+          <strong th:text="${csvImportDuplicateCount}">0</strong>
+          <span th:text="#{csv.duplicates.message}">entries were already present and were not imported.</span>
+        </p>
+        <ul class="modal-list">
+          <li th:each="entry : ${csvImportDuplicates}" th:text="${entry}">2026-02-01 - Sample - -10.00 EUR</li>
+        </ul>
+        <div class="modal-actions">
+          <button type="button" onclick="closeDuplicateModal()" th:text="#{common.ok}">Ok</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title" th:text="#{settings.profile}">Profile</div>
+      <form th:action="@{/settings/profile}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <label>
+          <span th:text="#{settings.displayName}">Display name</span>
+          <input type="text" name="displayName" maxlength="80" th:value="${displayName}" />
+        </label>
+        <button type="submit" th:text="#{settings.save}">Save</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="card-title" th:text="#{settings.language}">Language</div>
+      <form th:action="@{/settings/language}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <select name="language">
+          <option value="EN" th:selected="${selectedLanguage} == null or ${selectedLanguage} == 'EN'" th:text="#{settings.language.en}">English</option>
+          <option value="DE" th:selected="${selectedLanguage} == 'DE'" th:text="#{settings.language.de}">Deutsch</option>
+        </select>
+        <button type="submit" th:text="#{settings.update}">Update</button>
+      </form>
+    </div>
+
+    <div class="card" id="csv-import">
+      <div class="card-title" th:text="#{settings.importCsv}">Import CSV</div>
+      <p class="card-body" th:text="#{overview.importCsvHelp}">Upload a bank export to add transactions and update balances.</p>
+      <form th:action="@{/settings/import-csv}" method="post" enctype="multipart/form-data" class="stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <label>
+          <span th:text="#{overview.csvFile}">CSV file</span>
+          <input type="file" name="file" accept=".csv,text/csv" required />
+        </label>
+        <button type="submit" th:text="#{overview.uploadCsv}">Upload CSV</button>
+      </form>
+      <div class="hint" th:text="#{overview.csvHint}">Max 10MB. Expected header: Buchungstag, Wertstellung (Valuta), Vorgang, Buchungstext, Umsatz in EUR.</div>
+    </div>
+
+    <div class="card danger">
+      <div class="card-title" th:text="#{settings.data}">Data</div>
+      <form
+          th:action="@{/settings/delete-all-data}"
+          method="post"
+          onsubmit="return confirm(this.dataset.confirm);"
+          th:attr="data-confirm=#{confirm.deleteAllData}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit" th:text="#{settings.deleteAllData}">Delete all data</button>
+      </form>
+      <form
+          th:action="@{/settings/delete-account}"
+          method="post"
+          onsubmit="return confirm(this.dataset.confirm);"
+          th:attr="data-confirm=#{confirm.deleteAccount}">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit" th:text="#{settings.deleteAccount}">Delete account</button>
+      </form>
+    </div>
+    <script th:if="${csvImportDuplicates}">
+      function closeDuplicateModal() {
+        const modal = document.getElementById("duplicate-modal");
+        if (!modal) {
+          return;
+        }
+        modal.remove();
+      }
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeDuplicateModal();
+        }
+      });
+    </script>
+  </section>
+</html>
