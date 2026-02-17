@@ -1,6 +1,7 @@
 package com.example.finanzapp.web;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -103,9 +104,10 @@ class PartialsControllerTest {
 
     mockMvc.perform(get("/partials/balance-chart").with(user("chart-user@example.com")))
         .andExpect(status().isOk())
-        .andExpect(content().string(containsString("Latest balance")))
-        .andExpect(content().string(containsString("120.00 EUR")))
-        .andExpect(content().string(containsString("Balance (EUR)")))
+        .andExpect(content().string(not(containsString("Latest balance"))))
+        .andExpect(content().string(not(containsString("Balance (EUR)"))))
+        .andExpect(content().string(containsString("120 EUR")))
+        .andExpect(content().string(containsString("Balance: 120.00 EUR")))
         .andExpect(content().string(containsString("line-chart-marker")))
         .andExpect(content().string(containsString("Coffee Shop")));
   }
@@ -149,6 +151,7 @@ class PartialsControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("line-chart-marker")))
         .andExpect(content().string(containsString("Salary")))
+        .andExpect(content().string(containsString("Kontostand: 120,00 EUR")))
         .andExpect(content().string(containsString("993,44 EUR")));
   }
 

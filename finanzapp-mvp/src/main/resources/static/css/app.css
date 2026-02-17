@@ -404,21 +404,6 @@ body {
   gap: 12px;
 }
 
-.chart-summary {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.chart-summary span {
-  color: var(--muted);
-}
-
-.chart-summary strong {
-  color: var(--accent-strong);
-}
-
 .line-chart-wrap {
   display: grid;
   gap: 10px;
@@ -445,12 +430,6 @@ body {
   stroke: #d45353;
 }
 
-.line-chart-axis-title {
-  fill: #4f6a59;
-  font-size: 11px;
-  font-weight: 600;
-}
-
 .line-chart-y-tick {
   fill: var(--muted);
   font-size: 11px;
@@ -470,6 +449,18 @@ body {
   fill: #d66752;
   stroke: #fff7f2;
   stroke-width: 2;
+  transition: opacity 0.12s ease;
+}
+
+.line-chart-markers:hover .line-chart-marker-dot,
+.line-chart-markers:focus-within .line-chart-marker-dot {
+  opacity: 0;
+}
+
+.line-chart-marker:hover .line-chart-marker-dot,
+.line-chart-marker:focus .line-chart-marker-dot,
+.line-chart-marker:focus-within .line-chart-marker-dot {
+  opacity: 1;
 }
 
 .line-chart-tooltip {
@@ -494,6 +485,12 @@ body {
   fill: #d4eada;
   font-size: 11px;
   font-weight: 700;
+}
+
+.line-chart-tooltip-balance {
+  fill: #b8d8c4;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .line-chart-tooltip-line {

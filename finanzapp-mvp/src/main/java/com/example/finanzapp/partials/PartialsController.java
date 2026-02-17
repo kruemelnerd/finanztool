@@ -129,18 +129,19 @@ public class PartialsController {
     }
 
     Locale locale = resolveLocale(user.get());
-    long max = points.stream()
+    long rawMax = points.stream()
         .mapToLong(BalancePoint::balanceCents)
         .max()
         .orElse(0L);
-    long min = points.stream()
+    long rawMin = points.stream()
         .mapToLong(BalancePoint::balanceCents)
         .min()
         .orElse(0L);
+    ChartScale chartScale = resolveChartScale(rawMin, rawMax);
 
-    ChartShape shape = toChartShape(points, min, max);
+    ChartShape shape = toChartShape(points, chartScale.minCents(), chartScale.maxCents());
     DateTimeFormatter labelFormatter = resolveChartDateFormatter(locale);
-    List<ChartAxisTick> yAxisTicks = toYAxisTicks(min, max, locale);
+    List<ChartAxisTick> yAxisTicks = toYAxisTicks(chartScale, locale);
     List<ChartDebitMarker> debitMarkers = toDebitMarkers(user.get(), start, end, points, shape, locale);
 
     model.addAttribute("chartLinePoints", shape.linePoints());
@@ -151,12 +152,11 @@ public class PartialsController {
     model.addAttribute("chartPlotTopY", CHART_PAD_TOP);
     model.addAttribute("chartPlotBottomY", CHART_HEIGHT - CHART_PAD_BOTTOM);
     model.addAttribute("chartPlotWidth", round(chartPlotWidth()));
-    model.addAttribute("chartZeroY", resolveZeroY(min, max));
+    model.addAttribute("chartZeroY", resolveZeroY(chartScale.minCents(), chartScale.maxCents()));
     model.addAttribute("chartDebitMarkers", debitMarkers);
     model.addAttribute("chartTickStart", labelFormatter.format(points.get(0).date()));
     model.addAttribute("chartTickMiddle", labelFormatter.format(points.get(points.size() / 2).date()));
     model.addAttribute("chartTickEnd", labelFormatter.format(points.get(points.size() - 1).date()));
-    model.addAttribute("chartLatestAmount", formatAmount(points.get(points.size() - 1).balanceCents(), locale));
     model.addAttribute("chartEmpty", false);
     return "partials/balance-chart";
   }
@@ -176,7 +176,6 @@ public class PartialsController {
   }
 
   private ChartShape toChartShape(List<BalancePoint> points, long min, long max) {
-    long range = Math.max(1L, max - min);
     List<ChartPoint> coordinates = new ArrayList<>();
 
     for (int i = 0; i < points.size(); i++) {
@@ -184,9 +183,8 @@ public class PartialsController {
       double x = points.size() == 1
           ? CHART_PAD_LEFT
           : CHART_PAD_LEFT + (chartPlotWidth() * i / (double) (points.size() - 1));
-      double y = CHART_PAD_TOP + ((max - point.balanceCents()) / (double) range) * chartPlotHeight();
       int roundedX = round(x);
-      int roundedY = round(y);
+      int roundedY = toChartY(point.balanceCents(), min, max);
       coordinates.add(new ChartPoint(roundedX, roundedY));
     }
 
@@ -247,15 +245,14 @@ public class PartialsController {
     return String.format(Locale.ROOT, "%.2f", value);
   }
 
-  private List<ChartAxisTick> toYAxisTicks(long min, long max, Locale locale) {
-    int tickCount = 5;
-    long range = Math.max(1L, max - min);
+  private List<ChartAxisTick> toYAxisTicks(ChartScale chartScale, Locale locale) {
     List<ChartAxisTick> ticks = new ArrayList<>();
+    long step = chartScale.tickStepCents();
+    int tickCount = (int) ((chartScale.maxCents() - chartScale.minCents()) / step) + 1;
     for (int i = 0; i < tickCount; i++) {
-      double ratio = i / (double) (tickCount - 1);
-      long value = Math.round(max - (range * ratio));
-      int y = round(CHART_PAD_TOP + ratio * chartPlotHeight());
-      ticks.add(new ChartAxisTick(y, formatAmount(value, locale)));
+      long value = chartScale.maxCents() - (i * step);
+      int y = toChartY(value, chartScale.minCents(), chartScale.maxCents());
+      ticks.add(new ChartAxisTick(y, formatAxisAmount(value, locale)));
     }
     return ticks;
   }
@@ -283,9 +280,11 @@ public class PartialsController {
 
     Map<LocalDate, ChartPoint> pointByDate = new LinkedHashMap<>();
     Map<LocalDate, Integer> pointIndexByDate = new LinkedHashMap<>();
+    Map<LocalDate, Long> balanceByDate = new LinkedHashMap<>();
     for (int i = 0; i < points.size() && i < shape.coordinates().size(); i++) {
       pointByDate.put(points.get(i).date(), shape.coordinates().get(i));
       pointIndexByDate.put(points.get(i).date(), i);
+      balanceByDate.put(points.get(i).date(), points.get(i).balanceCents());
     }
 
     DateTimeFormatter dayFormatter = resolveChartDayFormatter(locale);
@@ -298,11 +297,17 @@ public class PartialsController {
         continue;
       }
 
+      Long dayBalanceCents = balanceByDate.get(entry.getKey());
+      if (dayBalanceCents == null) {
+        continue;
+      }
+      String balanceLabel = resolveTooltipBalanceLabel(dayBalanceCents, locale);
+
       List<String> lines = entry.getValue().stream()
           .map(tx -> formatDebitTooltipLine(tx, locale, timeFormatter))
           .toList();
-      int tooltipWidth = resolveTooltipWidth(lines);
-      int tooltipHeight = 34 + lines.size() * 16;
+      int tooltipWidth = resolveTooltipWidth(lines, balanceLabel);
+      int tooltipHeight = 50 + lines.size() * 16;
       int tooltipOffsetX = point.x() > CHART_WIDTH - tooltipWidth - 20 ? -tooltipWidth - 14 : 14;
       int preferredOffsetY = -tooltipHeight - 10;
       int minOffsetY = 8 - point.y();
@@ -316,6 +321,7 @@ public class PartialsController {
           tooltipWidth,
           tooltipHeight,
           dayFormatter.format(entry.getKey()),
+          balanceLabel,
           lines));
     }
     return markers;
@@ -336,10 +342,22 @@ public class PartialsController {
     return coordinates.get(index - 1);
   }
 
-  private int resolveTooltipWidth(List<String> lines) {
+  private int resolveTooltipWidth(List<String> lines, String balanceLabel) {
     int longestLineLength = lines.stream().mapToInt(String::length).max().orElse(0);
+    longestLineLength = Math.max(longestLineLength, balanceLabel.length());
     int estimated = 44 + (longestLineLength * 7);
     return Math.max(CHART_MIN_TOOLTIP_WIDTH, Math.min(CHART_MAX_TOOLTIP_WIDTH, estimated));
+  }
+
+  private String resolveTooltipBalanceLabel(long balanceCents, Locale locale) {
+    return resolveBalanceLabelPrefix(locale) + ": " + formatAmount(balanceCents, locale);
+  }
+
+  private String resolveBalanceLabelPrefix(Locale locale) {
+    if (Locale.GERMAN.getLanguage().equals(locale.getLanguage())) {
+      return "Kontostand";
+    }
+    return "Balance";
   }
 
   private String formatDebitTooltipLine(Transaction tx, Locale locale, DateTimeFormatter timeFormatter) {
@@ -389,6 +407,63 @@ public class PartialsController {
     return 30;
   }
 
+  private ChartScale resolveChartScale(long rawMin, long rawMax) {
+    long span = Math.max(1L, rawMax - rawMin);
+    long amplitude = Math.max(Math.abs(rawMin), Math.abs(rawMax));
+    long padding = Math.max(1_000L, Math.max(span / 8L, amplitude / 12L));
+
+    long expandedMin = rawMin - padding;
+    long expandedMax = rawMax + padding;
+    long tickStepCents = resolveTickStepCents(expandedMin, expandedMax);
+
+    long axisMin = floorToStep(expandedMin, tickStepCents);
+    long axisMax = ceilToStep(expandedMax, tickStepCents);
+
+    if (axisMax - axisMin < tickStepCents * 2L) {
+      axisMin -= tickStepCents;
+      axisMax += tickStepCents;
+    }
+
+    return new ChartScale(axisMin, axisMax, tickStepCents);
+  }
+
+  private long resolveTickStepCents(long minCents, long maxCents) {
+    double rangeEuros = Math.max(1.0d, (maxCents - minCents) / 100.0d);
+    double roughStepEuros = rangeEuros / 4.0d;
+
+    double magnitude = Math.pow(10.0d, Math.floor(Math.log10(roughStepEuros)));
+    double normalized = roughStepEuros / magnitude;
+
+    double niceNormalized;
+    if (normalized <= 1.0d) {
+      niceNormalized = 1.0d;
+    } else if (normalized <= 2.0d) {
+      niceNormalized = 2.0d;
+    } else if (normalized <= 5.0d) {
+      niceNormalized = 5.0d;
+    } else {
+      niceNormalized = 10.0d;
+    }
+
+    long stepEuros = (long) Math.ceil(niceNormalized * magnitude);
+    return Math.max(100L, stepEuros * 100L);
+  }
+
+  private long floorToStep(long value, long step) {
+    return Math.floorDiv(value, step) * step;
+  }
+
+  private long ceilToStep(long value, long step) {
+    long floor = floorToStep(value, step);
+    return floor == value ? value : floor + step;
+  }
+
+  private int toChartY(long valueCents, long minCents, long maxCents) {
+    long range = Math.max(1L, maxCents - minCents);
+    double y = CHART_PAD_TOP + ((maxCents - valueCents) / (double) range) * chartPlotHeight();
+    return round(y);
+  }
+
   private int resolveZeroY(long min, long max) {
     int plotTop = CHART_PAD_TOP;
     int plotBottom = CHART_HEIGHT - CHART_PAD_BOTTOM;
@@ -400,10 +475,15 @@ public class PartialsController {
       return plotBottom;
     }
 
-    long range = Math.max(1L, max - min);
-    double ratio = max / (double) range;
-    int zeroY = round(CHART_PAD_TOP + ratio * chartPlotHeight());
+    int zeroY = toChartY(0L, min, max);
     return Math.max(plotTop, Math.min(plotBottom, zeroY));
+  }
+
+  private String formatAxisAmount(long cents, Locale locale) {
+    DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
+    DecimalFormat format = new DecimalFormat("#,##0", symbols);
+    format.setGroupingUsed(true);
+    return format.format(cents / 100.0d) + " EUR";
   }
 
   private String formatAmount(long cents, Locale locale) {
@@ -419,6 +499,8 @@ public class PartialsController {
 
   private record ChartAxisTick(int y, String label) {}
 
+  private record ChartScale(long minCents, long maxCents, long tickStepCents) {}
+
   private record ChartDebitMarker(
       int x,
       int y,
@@ -427,5 +509,6 @@ public class PartialsController {
       int tooltipWidth,
       int tooltipHeight,
       String dayLabel,
+      String balanceLabel,
       List<String> lines) {}
 }

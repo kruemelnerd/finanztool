@@ -268,8 +268,9 @@ class PlaywrightE2ETest {
     page.locator(".overview-balance-amount").waitFor();
     assertThat(page.locator(".overview-balance-amount").innerText()).contains("200,00 EUR");
 
-    page.locator(".chart-summary strong").waitFor();
-    assertThat(page.locator(".chart-summary strong").innerText()).contains("200,00 EUR");
+    page.locator(".line-chart").waitFor();
+    assertThat(page.locator(".line-chart-line-positive").count()).isEqualTo(1);
+    assertThat(page.locator(".line-chart-line-negative").count()).isEqualTo(1);
 
     page.navigate(baseUrl() + "/transactions");
     page.locator(".current-balance strong").waitFor();
@@ -299,8 +300,10 @@ class PlaywrightE2ETest {
     page.locator(".overview-balance-amount").waitFor();
     assertThat(page.locator(".overview-balance-amount").innerText()).contains("-1.982,24 EUR");
 
-    page.locator(".chart-summary strong").waitFor();
-    assertThat(page.locator(".chart-summary strong").innerText()).contains("-1.982,24 EUR");
+    page.locator(".line-chart").waitFor();
+    assertThat(page.locator(".line-chart-line-positive").count()).isEqualTo(1);
+    assertThat(page.locator(".line-chart-line-negative").count()).isEqualTo(1);
+    assertThat(page.content()).contains("Kontostand:");
     assertThat(page.content()).contains("Buchungen am 29.01.2026");
     assertThat(page.locator(".line-chart-tooltip-line").allTextContents())
         .anySatisfy(line -> assertThat(line).contains("993,44 EUR"));

@@ -3,10 +3,6 @@
 </div>
 
 <div class="chart" th:if="${!chartEmpty}">
-  <div class="chart-summary">
-    <span th:text="#{chart.latestBalance}">Latest balance</span>
-    <strong th:text="${chartLatestAmount}">0.00 EUR</strong>
-  </div>
   <div class="line-chart-wrap">
     <svg class="line-chart" viewBox="0 0 860 230" preserveAspectRatio="none" role="img" aria-label="Balance chart">
       <defs>
@@ -28,11 +24,10 @@
       </g>
 
       <g class="line-chart-y-axis">
-        <text class="line-chart-axis-title" x="12" y="20" th:text="#{chart.yAxisLabel}">Balance (EUR)</text>
         <text class="line-chart-y-tick"
               th:each="tick : ${chartYAxisTicks}"
               th:attr="x=${chartPlotStartX - 10}, y=${tick.y + 4}"
-              th:text="${tick.label}">0.00 EUR</text>
+              th:text="${tick.label}">0 EUR</text>
       </g>
 
       <path th:attr="d=${chartAreaPoints}" fill="url(#line-fill)"></path>
@@ -55,10 +50,14 @@
                   x="10"
                   y="18"
                   th:text="#{chart.debitsOnDay(${marker.dayLabel})}">Debits on 01.01.2026</text>
+            <text class="line-chart-tooltip-balance"
+                  x="10"
+                  y="34"
+                  th:text="${marker.balanceLabel}">Balance: 100.00 EUR</text>
             <text class="line-chart-tooltip-line"
                   th:each="entry, stat : ${marker.lines}"
                   x="10"
-                  th:attr="y=${36 + (stat.index * 16)}"
+                  th:attr="y=${52 + (stat.index * 16)}"
                   th:text="${entry}">12:00  Store  -12.00 EUR</text>
           </g>
         </g>
