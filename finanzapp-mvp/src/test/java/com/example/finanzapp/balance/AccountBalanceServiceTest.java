@@ -41,11 +41,11 @@ class AccountBalanceServiceTest {
     User user = user();
 
     String csv = String.join("\n",
-        "Neuer Kontostand,\"150,00 EUR\"",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "02.01.2026,02.01.2026,SONSTIGES,\"Buchungstext: Zwei\",\"30,00\"",
-        "01.01.2026,01.01.2026,SONSTIGES,\"Buchungstext: Eins\",\"20,00\"");
+        "Neuer Kontostand;150,00 EUR",
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "02.01.2026;02.01.2026;SONSTIGES;Buchungstext: Zwei;30,00",
+        "01.01.2026;01.01.2026;SONSTIGES;Buchungstext: Eins;20,00");
 
     CsvArtifact artifact = new CsvArtifact();
     artifact.setBytes(csv.getBytes(StandardCharsets.UTF_8));
@@ -73,10 +73,10 @@ class AccountBalanceServiceTest {
     User user = user();
 
     String csv = String.join("\n",
-        "Neuer Kontostand,\"150,00 EUR\"",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.01.2026,01.01.2026,SONSTIGES,\"Buchungstext: Eins\",\"20,00\"");
+        "Neuer Kontostand;150,00 EUR",
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.01.2026;01.01.2026;SONSTIGES;Buchungstext: Eins;20,00");
 
     CsvArtifact artifact = new CsvArtifact();
     artifact.setBytes(csv.getBytes(StandardCharsets.UTF_8));
@@ -103,26 +103,26 @@ class AccountBalanceServiceTest {
     User user = user();
 
     CsvArtifact latest = artifact(String.join("\n",
-        "Neuer Kontostand,\"200,00 EUR\"",
-        "Alter Kontostand,\"500,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.03.2025,01.03.2025,LASTSCHRIFT,\"Buchungstext: A\",\"-100,00\"",
-        "02.03.2025,02.03.2025,LASTSCHRIFT,\"Buchungstext: B\",\"-200,00\""));
+        "Neuer Kontostand;200,00 EUR",
+        "Alter Kontostand;500,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.03.2025;01.03.2025;LASTSCHRIFT;Buchungstext: A;-100,00",
+        "02.03.2025;02.03.2025;LASTSCHRIFT;Buchungstext: B;-200,00"));
 
     CsvArtifact middle = artifact(String.join("\n",
-        "Neuer Kontostand,\"100,00 EUR\"",
-        "Alter Kontostand,\"700,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "05.02.2025,05.02.2025,LASTSCHRIFT,\"Buchungstext: C\",\"-300,00\"",
-        "01.03.2025,01.03.2025,LASTSCHRIFT,\"Buchungstext: A\",\"-100,00\"",
-        "02.03.2025,02.03.2025,LASTSCHRIFT,\"Buchungstext: B\",\"-200,00\""));
+        "Neuer Kontostand;100,00 EUR",
+        "Alter Kontostand;700,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "05.02.2025;05.02.2025;LASTSCHRIFT;Buchungstext: C;-300,00",
+        "01.03.2025;01.03.2025;LASTSCHRIFT;Buchungstext: A;-100,00",
+        "02.03.2025;02.03.2025;LASTSCHRIFT;Buchungstext: B;-200,00"));
 
     CsvArtifact oldest = artifact(String.join("\n",
-        "Neuer Kontostand,\"100,00 EUR\"",
-        "Alter Kontostand,\"1.000,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "10.01.2025,10.01.2025,LASTSCHRIFT,\"Buchungstext: D\",\"-600,00\"",
-        "05.02.2025,05.02.2025,LASTSCHRIFT,\"Buchungstext: C\",\"-300,00\""));
+        "Neuer Kontostand;100,00 EUR",
+        "Alter Kontostand;1.000,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "10.01.2025;10.01.2025;LASTSCHRIFT;Buchungstext: D;-600,00",
+        "05.02.2025;05.02.2025;LASTSCHRIFT;Buchungstext: C;-300,00"));
 
     List<Transaction> activeTransactions = List.of(
         tx(user, LocalDateTime.of(2025, 3, 2, 12, 0), -20000L),

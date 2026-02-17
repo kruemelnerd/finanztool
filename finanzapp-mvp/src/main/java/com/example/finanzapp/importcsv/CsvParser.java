@@ -4,6 +4,12 @@ import com.example.finanzapp.domain.Transaction;
 import java.io.IOException;
 import java.io.StringReader;
 import java.math.BigDecimal;
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,9 +25,16 @@ import org.apache.commons.csv.CSVRecord;
 
 public class CsvParser {
   private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+  private static final Charset WINDOWS_1252 = Charset.forName("windows-1252");
+  private static final char CSV_DELIMITER = ';';
+  private static final String HEADER_BOOKING_DAY = "Buchungstag";
+  private static final String HEADER_VALUE_DATE = "Wertstellung (Valuta)";
+  private static final String HEADER_TRANSACTION_TYPE = "Vorgang";
+  private static final String HEADER_BOOKING_TEXT = "Buchungstext";
+  private static final String HEADER_AMOUNT = "Umsatz in EUR";
 
   public CsvParsingResult parse(byte[] bytes) {
-    String content = new String(bytes, StandardCharsets.UTF_8);
+    String content = decodeContent(bytes);
     List<String> lines = content.lines().toList();
     int headerIndex = findHeaderIndex(lines);
     if (headerIndex < 0) {
@@ -40,10 +53,44 @@ public class CsvParser {
     return new CsvParsingResult(startBalance, currentBalance, transactions);
   }
 
+  private String decodeContent(byte[] bytes) {
+    byte[] withoutBom = stripUtf8Bom(bytes);
+    String utf8 = decodeStrict(withoutBom, StandardCharsets.UTF_8);
+    if (utf8 != null) {
+      return utf8;
+    }
+    return new String(withoutBom, WINDOWS_1252);
+  }
+
+  private byte[] stripUtf8Bom(byte[] bytes) {
+    if (bytes != null
+        && bytes.length >= 3
+        && (bytes[0] & 0xFF) == 0xEF
+        && (bytes[1] & 0xFF) == 0xBB
+        && (bytes[2] & 0xFF) == 0xBF) {
+      byte[] withoutBom = new byte[bytes.length - 3];
+      System.arraycopy(bytes, 3, withoutBom, 0, withoutBom.length);
+      return withoutBom;
+    }
+    return bytes;
+  }
+
+  private String decodeStrict(byte[] bytes, Charset charset) {
+    CharsetDecoder decoder = charset.newDecoder();
+    decoder.onMalformedInput(CodingErrorAction.REPORT);
+    decoder.onUnmappableCharacter(CodingErrorAction.REPORT);
+    try {
+      CharBuffer decoded = decoder.decode(ByteBuffer.wrap(bytes));
+      return decoded.toString();
+    } catch (CharacterCodingException ex) {
+      return null;
+    }
+  }
+
   private int findHeaderIndex(List<String> lines) {
     for (int i = 0; i < lines.size(); i++) {
       String line = lines.get(i);
-      if (line.contains("Buchungstag") && line.contains("Umsatz in EUR")) {
+      if (line.contains(HEADER_BOOKING_DAY) && line.contains(HEADER_AMOUNT)) {
         return i;
       }
     }
@@ -55,13 +102,13 @@ public class CsvParser {
     Long newBalance = null;
     for (String line : metaLines) {
       String trimmed = line == null ? "" : line.trim();
-      if (trimmed.startsWith("Alter Kontostand")) {
+      if (isBalanceLine(trimmed, "Alter Kontostand")) {
         Long parsed = parseBalanceLine(line);
         if (parsed != null) {
           oldBalance = parsed;
         }
       }
-      if (trimmed.startsWith("Neuer Kontostand")) {
+      if (isBalanceLine(trimmed, "Neuer Kontostand")) {
         Long parsed = parseBalanceLine(line);
         if (parsed != null) {
           newBalance = parsed;
@@ -69,6 +116,10 @@ public class CsvParser {
       }
     }
     return new BalanceMeta(oldBalance, newBalance);
+  }
+
+  private boolean isBalanceLine(String line, String key) {
+    return line.startsWith(key) || line.startsWith('"' + key + '"');
   }
 
   private Long deriveStartBalance(Long oldBalance, Long newBalance, long transactionSum) {
@@ -94,7 +145,7 @@ public class CsvParser {
   private Long parseBalanceLine(String line) {
     try (CSVParser parser = CSVParser.parse(
         new StringReader(line),
-        CSVFormat.DEFAULT.builder().setDelimiter(',').build())) {
+        CSVFormat.DEFAULT.builder().setDelimiter(CSV_DELIMITER).build())) {
       for (CSVRecord record : parser) {
         if (record.size() > 1) {
           String raw = clean(record.get(1));
@@ -116,28 +167,41 @@ public class CsvParser {
   private List<Transaction> parseTransactions(String dataSection) {
     try (CSVParser parser = CSVParser.parse(
         new StringReader(dataSection),
-        CSVFormat.DEFAULT.builder().setHeader().setSkipHeaderRecord(true).setDelimiter(',').build())) {
+        CSVFormat.DEFAULT.builder()
+            .setHeader()
+            .setSkipHeaderRecord(true)
+            .setAllowMissingColumnNames(true)
+            .setDelimiter(CSV_DELIMITER)
+            .build())) {
       List<Transaction> transactions = new ArrayList<>();
       for (CSVRecord record : parser) {
-        String transactionType = clean(record.get("Vorgang"));
-        String rawBookingText = clean(record.get("Buchungstext"));
-        String amountRaw = clean(record.get("Umsatz in EUR"));
+        if (isBlankRecord(record)) {
+          continue;
+        }
+        if (isTrailingMetaRecord(record)) {
+          continue;
+        }
+        ensureMinimumTransactionColumns(record);
+
+        String transactionType = getColumnValue(record, HEADER_TRANSACTION_TYPE);
+        String rawBookingText = getColumnValue(record, HEADER_BOOKING_TEXT);
+        String amountRaw = getColumnValue(record, HEADER_AMOUNT);
         BookingTextParts bookingTextParts = parseBookingTextParts(rawBookingText);
 
-        LocalDate bookingDate = tryParseDate(record.get("Buchungstag"));
+        LocalDate bookingDate = tryParseDate(getColumnValue(record, HEADER_BOOKING_DAY));
         if (bookingDate == null) {
           if (shouldSkipRecord(transactionType, rawBookingText, amountRaw)) {
             continue;
           }
           throw new CsvImportException(
-              "Invalid Buchungstag in row " + record.getRecordNumber());
+              "Invalid Buchungstag in row " + record.getRecordNumber() + ": " + record);
         }
 
         Transaction transaction = new Transaction();
         LocalDateTime bookingDateTime = LocalDateTime.of(bookingDate, LocalTime.MIDNIGHT);
         transaction.setBookingDateTime(bookingDateTime);
         transaction.setValueDate(
-            parseOptionalDate(record.get("Wertstellung (Valuta)"), record.getRecordNumber()));
+            parseOptionalDate(getColumnValue(record, HEADER_VALUE_DATE), record.getRecordNumber()));
         transaction.setTransactionType(transactionType);
         transaction.setRawBookingText(rawBookingText);
         transaction.setPayerName(bookingTextParts.payerName());
@@ -155,6 +219,55 @@ public class CsvParser {
     } catch (IOException ex) {
       throw new CsvImportException("CSV parsing failed", ex);
     }
+  }
+
+  private void ensureMinimumTransactionColumns(CSVRecord record) {
+    if (record.size() >= 5) {
+      return;
+    }
+    throw new CsvImportException(
+        "Invalid CSV row " + record.getRecordNumber()
+            + ": expected at least 5 columns ("
+            + HEADER_BOOKING_DAY + ";"
+            + HEADER_VALUE_DATE + ";"
+            + HEADER_TRANSACTION_TYPE + ";"
+            + HEADER_BOOKING_TEXT + ";"
+            + HEADER_AMOUNT + ") but got "
+            + record.size() + " values: " + record);
+  }
+
+  private boolean isBlankRecord(CSVRecord record) {
+    for (int i = 0; i < record.size(); i++) {
+      String value = record.get(i);
+      if (value != null && !value.isBlank()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean isTrailingMetaRecord(CSVRecord record) {
+    if (record.size() == 0) {
+      return true;
+    }
+    String firstValue = clean(record.get(0));
+    if (firstValue == null || firstValue.isBlank()) {
+      return false;
+    }
+    String normalized = firstValue.toLowerCase(Locale.ROOT);
+    return normalized.startsWith("alter kontostand")
+        || normalized.startsWith("neuer kontostand")
+        || normalized.startsWith("umsätze girokonto")
+        || normalized.startsWith("umsaetze girokonto")
+        || normalized.startsWith("zeitraum")
+        || normalized.equals(HEADER_BOOKING_DAY.toLowerCase(Locale.ROOT));
+  }
+
+  private String getColumnValue(CSVRecord record, String headerName) {
+    if (!record.isMapped(headerName) || !record.isSet(headerName)) {
+      return null;
+    }
+    return clean(record.get(headerName));
   }
 
   private LocalDate tryParseDate(String raw) {

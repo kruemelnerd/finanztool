@@ -202,16 +202,16 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        ",,,,",
-        "Umsaetze Girokonto,Zeitraum: 180 Tage,,,",
-        "Neuer Kontostand,\"334,78 EUR\",,,",
-        ",,,,",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "03.02.2026,03.02.2026,Lastschrift / Belastung,\"Auftraggeber: Markt Buchungstext: Einkauf\",\"-52,84\"",
-        "02.02.2026,02.02.2026,Uebertrag / Ueberweisung,\"Auftraggeber: Alex Buchungstext: Uebertrag\",-120",
-        "01.02.2026,01.02.2026,Karte,\"Buchungstext: Lunch\",\"-75,00\"",
-        ",,,,",
-        "Alter Kontostand,\"908,13 EUR\",,,");
+        ";;;;",
+        "Umsaetze Girokonto;Zeitraum: 180 Tage;;;",
+        "Neuer Kontostand;334,78 EUR;;;",
+        ";;;;",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "03.02.2026;03.02.2026;Lastschrift / Belastung;Auftraggeber: Markt Buchungstext: Einkauf;-52,84",
+        "02.02.2026;02.02.2026;Uebertrag / Ueberweisung;Auftraggeber: Alex Buchungstext: Uebertrag;-120",
+        "01.02.2026;01.02.2026;Karte;Buchungstext: Lunch;-75,00",
+        ";;;;",
+        "Alter Kontostand;908,13 EUR;;;");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -237,26 +237,26 @@ class PlaywrightE2ETest {
     login();
 
     String overlap1 = String.join("\n",
-        "Neuer Kontostand,\"200,00 EUR\"",
-        "Alter Kontostand,\"500,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.03.2025,01.03.2025,LASTSCHRIFT,\"Buchungstext: A\",\"-100,00\"",
-        "02.03.2025,02.03.2025,LASTSCHRIFT,\"Buchungstext: B\",\"-200,00\"");
+        "Neuer Kontostand;200,00 EUR",
+        "Alter Kontostand;500,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.03.2025;01.03.2025;LASTSCHRIFT;Buchungstext: A;-100,00",
+        "02.03.2025;02.03.2025;LASTSCHRIFT;Buchungstext: B;-200,00");
 
     String overlap2 = String.join("\n",
-        "Neuer Kontostand,\"100,00 EUR\"",
-        "Alter Kontostand,\"700,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "05.02.2025,05.02.2025,LASTSCHRIFT,\"Buchungstext: C\",\"-300,00\"",
-        "01.03.2025,01.03.2025,LASTSCHRIFT,\"Buchungstext: A\",\"-100,00\"",
-        "02.03.2025,02.03.2025,LASTSCHRIFT,\"Buchungstext: B\",\"-200,00\"");
+        "Neuer Kontostand;100,00 EUR",
+        "Alter Kontostand;700,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "05.02.2025;05.02.2025;LASTSCHRIFT;Buchungstext: C;-300,00",
+        "01.03.2025;01.03.2025;LASTSCHRIFT;Buchungstext: A;-100,00",
+        "02.03.2025;02.03.2025;LASTSCHRIFT;Buchungstext: B;-200,00");
 
     String overlap3 = String.join("\n",
-        "Neuer Kontostand,\"100,00 EUR\"",
-        "Alter Kontostand,\"1.000,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "10.01.2025,10.01.2025,LASTSCHRIFT,\"Buchungstext: D\",\"-600,00\"",
-        "05.02.2025,05.02.2025,LASTSCHRIFT,\"Buchungstext: C\",\"-300,00\"");
+        "Neuer Kontostand;100,00 EUR",
+        "Alter Kontostand;1.000,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "10.01.2025;10.01.2025;LASTSCHRIFT;Buchungstext: D;-600,00",
+        "05.02.2025;05.02.2025;LASTSCHRIFT;Buchungstext: C;-300,00");
 
     uploadCsvFromOverview("overlap-1.csv", overlap1);
     closeDuplicateModalIfVisible();
@@ -315,11 +315,11 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"",
-        "02.02.2026,02.02.2026,UEBERWEISUNG,\"Buchungstext: Service\",\"-120,00\"",
-        "03.02.2026,03.02.2026,KARTE,\"Buchungstext: Lunch\",\"-75,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00",
+        "02.02.2026;02.02.2026;UEBERWEISUNG;Buchungstext: Service;-120,00",
+        "03.02.2026;03.02.2026;KARTE;Buchungstext: Lunch;-75,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -364,20 +364,20 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: One\",\"-1,00\"",
-        "02.02.2026,02.02.2026,LASTSCHRIFT,\"Buchungstext: Two\",\"-2,00\"",
-        "03.02.2026,03.02.2026,LASTSCHRIFT,\"Buchungstext: Three\",\"-3,00\"",
-        "04.02.2026,04.02.2026,LASTSCHRIFT,\"Buchungstext: Four\",\"-4,00\"",
-        "05.02.2026,05.02.2026,LASTSCHRIFT,\"Buchungstext: Five\",\"-5,00\"",
-        "06.02.2026,06.02.2026,LASTSCHRIFT,\"Buchungstext: Six\",\"-6,00\"",
-        "07.02.2026,07.02.2026,LASTSCHRIFT,\"Buchungstext: Seven\",\"-7,00\"",
-        "08.02.2026,08.02.2026,LASTSCHRIFT,\"Buchungstext: Eight\",\"-8,00\"",
-        "09.02.2026,09.02.2026,LASTSCHRIFT,\"Buchungstext: Nine\",\"-9,00\"",
-        "10.02.2026,10.02.2026,LASTSCHRIFT,\"Buchungstext: Ten\",\"-10,00\"",
-        "11.02.2026,11.02.2026,LASTSCHRIFT,\"Buchungstext: Eleven\",\"-11,00\"",
-        "12.02.2026,12.02.2026,LASTSCHRIFT,\"Buchungstext: Twelve\",\"-12,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: One;-1,00",
+        "02.02.2026;02.02.2026;LASTSCHRIFT;Buchungstext: Two;-2,00",
+        "03.02.2026;03.02.2026;LASTSCHRIFT;Buchungstext: Three;-3,00",
+        "04.02.2026;04.02.2026;LASTSCHRIFT;Buchungstext: Four;-4,00",
+        "05.02.2026;05.02.2026;LASTSCHRIFT;Buchungstext: Five;-5,00",
+        "06.02.2026;06.02.2026;LASTSCHRIFT;Buchungstext: Six;-6,00",
+        "07.02.2026;07.02.2026;LASTSCHRIFT;Buchungstext: Seven;-7,00",
+        "08.02.2026;08.02.2026;LASTSCHRIFT;Buchungstext: Eight;-8,00",
+        "09.02.2026;09.02.2026;LASTSCHRIFT;Buchungstext: Nine;-9,00",
+        "10.02.2026;10.02.2026;LASTSCHRIFT;Buchungstext: Ten;-10,00",
+        "11.02.2026;11.02.2026;LASTSCHRIFT;Buchungstext: Eleven;-11,00",
+        "12.02.2026;12.02.2026;LASTSCHRIFT;Buchungstext: Twelve;-12,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -406,10 +406,10 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"",
-        "02.02.2026,02.02.2026,UEBERWEISUNG,\"Buchungstext: Service\",\"-120,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00",
+        "02.02.2026;02.02.2026;UEBERWEISUNG;Buchungstext: Service;-120,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -444,9 +444,9 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -476,10 +476,10 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,KARTE,\"Buchungstext: Space Marine 2 Ref. DL5C28T842OQG7NU\",\"-45,00\"",
-        "02.02.2026,02.02.2026,KARTE,\"Buchungstext: Grocery Store\",\"-12,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;KARTE;Buchungstext: Space Marine 2 Ref. DL5C28T842OQG7NU;-45,00",
+        "02.02.2026;02.02.2026;KARTE;Buchungstext: Grocery Store;-12,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -507,9 +507,9 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
@@ -538,11 +538,11 @@ class PlaywrightE2ETest {
     login();
 
     String csv = String.join("\n",
-        "Alter Kontostand,\"100,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"",
-        "02.02.2026,02.02.2026,UEBERWEISUNG,\"Buchungstext: Service\",\"-120,00\"",
-        "03.02.2026,03.02.2026,KARTE,\"Buchungstext: Lunch\",\"-75,00\"");
+        "Alter Kontostand;100,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00",
+        "02.02.2026;02.02.2026;UEBERWEISUNG;Buchungstext: Service;-120,00",
+        "03.02.2026;03.02.2026;KARTE;Buchungstext: Lunch;-75,00");
 
     FilePayload payload = new FilePayload(
         "import.csv",
