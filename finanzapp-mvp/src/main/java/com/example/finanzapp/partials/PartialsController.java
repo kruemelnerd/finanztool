@@ -279,11 +279,9 @@ public class PartialsController {
             Collectors.toList()));
 
     Map<LocalDate, ChartPoint> pointByDate = new LinkedHashMap<>();
-    Map<LocalDate, Integer> pointIndexByDate = new LinkedHashMap<>();
     Map<LocalDate, Long> balanceByDate = new LinkedHashMap<>();
     for (int i = 0; i < points.size() && i < shape.coordinates().size(); i++) {
       pointByDate.put(points.get(i).date(), shape.coordinates().get(i));
-      pointIndexByDate.put(points.get(i).date(), i);
       balanceByDate.put(points.get(i).date(), points.get(i).balanceCents());
     }
 
@@ -292,7 +290,7 @@ public class PartialsController {
     List<ChartDebitMarker> markers = new ArrayList<>();
 
     for (Map.Entry<LocalDate, List<Transaction>> entry : debitsByDate.entrySet()) {
-      ChartPoint point = resolveMarkerPoint(entry.getKey(), pointByDate, pointIndexByDate, shape.coordinates());
+      ChartPoint point = resolveMarkerPoint(entry.getKey(), pointByDate);
       if (point == null) {
         continue;
       }
@@ -327,19 +325,8 @@ public class PartialsController {
     return markers;
   }
 
-  private ChartPoint resolveMarkerPoint(
-      LocalDate bookingDate,
-      Map<LocalDate, ChartPoint> pointByDate,
-      Map<LocalDate, Integer> pointIndexByDate,
-      List<ChartPoint> coordinates) {
-    Integer index = pointIndexByDate.get(bookingDate);
-    if (index == null) {
-      return null;
-    }
-    if (index <= 0) {
-      return pointByDate.get(bookingDate);
-    }
-    return coordinates.get(index - 1);
+  private ChartPoint resolveMarkerPoint(LocalDate bookingDate, Map<LocalDate, ChartPoint> pointByDate) {
+    return pointByDate.get(bookingDate);
   }
 
   private int resolveTooltipWidth(List<String> lines, String balanceLabel) {
@@ -355,9 +342,9 @@ public class PartialsController {
 
   private String resolveBalanceLabelPrefix(Locale locale) {
     if (Locale.GERMAN.getLanguage().equals(locale.getLanguage())) {
-      return "Kontostand";
+      return "Kontostand Tagesende";
     }
-    return "Balance";
+    return "End-of-day balance";
   }
 
   private String formatDebitTooltipLine(Transaction tx, Locale locale, DateTimeFormatter timeFormatter) {

@@ -107,7 +107,7 @@ class PartialsControllerTest {
         .andExpect(content().string(not(containsString("Latest balance"))))
         .andExpect(content().string(not(containsString("Balance (EUR)"))))
         .andExpect(content().string(containsString("120 EUR")))
-        .andExpect(content().string(containsString("Balance: 120.00 EUR")))
+        .andExpect(content().string(containsString("End-of-day balance: 120.00 EUR")))
         .andExpect(content().string(containsString("line-chart-marker")))
         .andExpect(content().string(containsString("Coffee Shop")));
   }
@@ -151,7 +151,7 @@ class PartialsControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("line-chart-marker")))
         .andExpect(content().string(containsString("Salary")))
-        .andExpect(content().string(containsString("Kontostand: 120,00 EUR")))
+        .andExpect(content().string(containsString("Kontostand Tagesende: 120,00 EUR")))
         .andExpect(content().string(containsString("993,44 EUR")));
   }
 
