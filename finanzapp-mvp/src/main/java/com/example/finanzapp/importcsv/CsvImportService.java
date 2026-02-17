@@ -12,12 +12,16 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CsvImportService {
   public static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
+  private static final Pattern REFERENCE_PATTERN =
+      Pattern.compile("(?i)\\bref\\b\\.?\\s*[:#-]?\\s*([^\\s;,)]+)");
 
   private final CsvArtifactRepository csvArtifactRepository;
   private final TransactionRepository transactionRepository;
@@ -94,12 +98,57 @@ public class CsvImportService {
   }
 
   private String buildKey(Transaction transaction) {
+    String reference = resolveReference(transaction);
+    if (!reference.isBlank()) {
+      return "ref|" + reference;
+    }
+
     String date = transaction.getBookingDateTime().toLocalDate().toString();
     String amount = Long.toString(transaction.getAmountCents());
     String name = normalize(transaction.getPartnerName());
     String purpose = normalizePurpose(transaction.getPurposeText());
     String type = normalize(transaction.getTransactionType());
     return String.join("|", date, amount, name, purpose, type);
+  }
+
+  private String resolveReference(Transaction transaction) {
+    String reference = normalizeReference(transaction.getReferenceText());
+    if (!reference.isBlank()) {
+      return reference;
+    }
+
+    reference = extractReferenceToken(transaction.getRawBookingText());
+    if (!reference.isBlank()) {
+      return reference;
+    }
+
+    return extractReferenceToken(transaction.getPurposeText());
+  }
+
+  private String normalizeReference(String value) {
+    if (value == null) {
+      return "";
+    }
+    String normalized = value.trim().toLowerCase(Locale.ROOT);
+    normalized = normalized.replaceAll("^[\\p{Punct}\\s]+", "");
+    normalized = normalized.replaceAll("[\\p{Punct}\\s]+$", "");
+    return normalized;
+  }
+
+  private String extractReferenceToken(String source) {
+    if (source == null) {
+      return "";
+    }
+    Matcher matcher = REFERENCE_PATTERN.matcher(source);
+    if (!matcher.find()) {
+      return "";
+    }
+
+    String token = matcher.group(1);
+    if (token == null) {
+      return "";
+    }
+    return normalizeReference(token);
   }
 
   private String formatDuplicate(Transaction transaction) {

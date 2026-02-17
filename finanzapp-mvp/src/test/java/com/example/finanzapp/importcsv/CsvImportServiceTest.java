@@ -64,9 +64,9 @@ class CsvImportServiceTest {
   @Test
   void importStoresArtifactTransactionsAndBalance() {
     String csv = String.join("\n",
-        "Alter Kontostand,\"10,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,SONSTIGES,\"Buchungstext: Test\",\"1,00\"");
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;SONSTIGES;Buchungstext: Test;1,00");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();
@@ -110,8 +110,8 @@ class CsvImportServiceTest {
   @Test
   void importSkipsBalanceWhenStartBalanceMissing() {
     String csv = String.join("\n",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,SONSTIGES,\"Buchungstext: Test\",\"1,00\"");
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;SONSTIGES;Buchungstext: Test;1,00");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();
@@ -132,9 +132,9 @@ class CsvImportServiceTest {
   @Test
   void importSkipsDuplicateTransactions() {
     String csv = String.join("\n",
-        "Alter Kontostand,\"10,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,SONSTIGES,\"Buchungstext: Test\",\"1,00\"");
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;SONSTIGES;Buchungstext: Test;1,00");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();
@@ -162,11 +162,11 @@ class CsvImportServiceTest {
   @Test
   void importReturnsAllDuplicateSamples() {
     String csv = String.join("\n",
-        "Alter Kontostand,\"10,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.02.2026,01.02.2026,LASTSCHRIFT,\"Buchungstext: Abo\",\"-31,00\"",
-        "02.02.2026,02.02.2026,UEBERWEISUNG,\"Buchungstext: Service\",\"-120,00\"",
-        "03.02.2026,03.02.2026,KARTE,\"Buchungstext: Lunch\",\"-75,00\"");
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00",
+        "02.02.2026;02.02.2026;UEBERWEISUNG;Buchungstext: Service;-120,00",
+        "03.02.2026;03.02.2026;KARTE;Buchungstext: Lunch;-75,00");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();
@@ -216,9 +216,9 @@ class CsvImportServiceTest {
   @Test
   void importDetectsDuplicateWhenExistingPurposeContainsCardSuffix() {
     String csv = String.join("\n",
-        "Alter Kontostand,\"10,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "06.02.2026,05.02.2026,Lastschrift / Belastung,\"Auftraggeber: H&M Buchungstext: H&M, Berlin DE Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung\",\"-28,28\"");
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "06.02.2026;05.02.2026;Lastschrift / Belastung;Auftraggeber: H&M Buchungstext: H&M, Berlin DE Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung;-28,28");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();
@@ -245,11 +245,129 @@ class CsvImportServiceTest {
   }
 
   @Test
+  void importDoesNotTreatDifferentReferenceAsDuplicate() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Kartenverfügung;Buchungstext: REST. DANA SNACK-IT, AMSTERDAM NL Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung comdirect Visa-Debitkarte 2025-10-20 00:00:00 Ref. 6P2C21SF0YDH26QB/60016;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Kartenverfügung");
+    existing.setPartnerName("REST. DANA SNACK-IT");
+    existing.setPurposeText("REST. DANA SNACK-IT, AMSTERDAM NL");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("6P2C21SF0YDH26QB/83955");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+    when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(1);
+    assertThat(result.duplicateCount()).isZero();
+  }
+
+  @Test
+  void importTreatsSameReferenceAsDuplicate() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Kartenverfügung;Buchungstext: REST. DANA SNACK-IT, AMSTERDAM NL Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung comdirect Visa-Debitkarte 2025-10-20 00:00:00 Ref. 6P2C21SF0YDH26QB/83955;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Andere Beschreibung");
+    existing.setPartnerName("Irgendein Name");
+    existing.setPurposeText("Abweichender Text");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("6P2C21SF0YDH26QB/83955");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
+  void importTreatsReferenceCaseAndDelimiterVariantsAsDuplicate() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Kartenverfügung;Buchungstext: REST. DANA SNACK-IT, AMSTERDAM NL REF: 6P2C21SF0YDH26QB/83955;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Andere Beschreibung");
+    existing.setPartnerName("Irgendein Name");
+    existing.setPurposeText("Abweichender Text");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("6P2C21SF0YDH26QB/83955");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
+  void importIgnoresMalformedReferenceTokenAndFallsBackToCompositeKey() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Karte;Buchungstext: Coffee Ref.:;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 24, 0, 0));
+    existing.setTransactionType("Karte");
+    existing.setPartnerName("Cafe");
+    existing.setPurposeText("Coffee");
+    existing.setAmountCents(-900L);
+    existing.setReferenceText(":");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+    when(transactionRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(1);
+    assertThat(result.duplicateCount()).isZero();
+  }
+
+  @Test
   void importPersistsSplitBookingComponents() {
     String csv = String.join("\n",
-        "Alter Kontostand,\"10,00 EUR\"",
-        "Buchungstag,Wertstellung (Valuta),Vorgang,Buchungstext,Umsatz in EUR",
-        "01.09.2025,01.09.2025,Lastschrift / Belastung,\"Auftraggeber: PayPal Europe S.a.r.l. et Cie S.C.A Buchungstext: PayPal Europe S.a.r.l. et Cie S.C.A, Luxembourg DE Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung comdirect Visa-Debitkarte 2025-09-01 00:00:00 Ref. OWGZRIXA11DPG8SB/32663\",\"-12,34\"");
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.09.2025;01.09.2025;Lastschrift / Belastung;Auftraggeber: PayPal Europe S.a.r.l. et Cie S.C.A Buchungstext: PayPal Europe S.a.r.l. et Cie S.C.A, Luxembourg DE Karte Nr. 4871 78XX XXXX 8491 Kartenzahlung comdirect Visa-Debitkarte 2025-09-01 00:00:00 Ref. OWGZRIXA11DPG8SB/32663;-12,34");
     byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
 
     User user = new User();

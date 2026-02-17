@@ -1,6 +1,6 @@
 # Projekt-Status und TODOs
 
-Zuletzt aktualisiert: 2026-02-15
+Zuletzt aktualisiert: 2026-02-17
 
 ## Sprintliste (Top 10)
 
@@ -32,6 +32,9 @@ Zuletzt aktualisiert: 2026-02-15
 - [ ] i18n-Hardcodings in Controllern entfernen und in messages_* verschieben
 - [ ] Chart-Akzeptanzszenarien in Cucumber aufnehmen (Marker/Tooltip/y-axis)
 - [ ] Error-States mit Retry fuer Partials (insb. Overview-Chart) einfuehren
+- [x] CSV-Encoding/Umlaute robust behandeln, damit Umlaute in Imports korrekt dargestellt werden
+- [x] Gezielte Testfaelle fuer ReferenceText-Deduplizierung erweitern
+- [ ] Chart-Farbe dynamisch: bei Minus rot, bei Plus gruen
 
 ## Hinweis fuer naechste Session
 
