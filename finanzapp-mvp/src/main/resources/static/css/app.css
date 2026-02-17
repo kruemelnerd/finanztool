@@ -437,6 +437,14 @@ body {
   stroke-width: 1;
 }
 
+.line-chart-line-positive {
+  stroke: #27b788;
+}
+
+.line-chart-line-negative {
+  stroke: #d45353;
+}
+
 .line-chart-axis-title {
   fill: #4f6a59;
   font-size: 11px;

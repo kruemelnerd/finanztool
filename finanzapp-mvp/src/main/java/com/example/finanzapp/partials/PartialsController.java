@@ -148,6 +148,10 @@ public class PartialsController {
     model.addAttribute("chartYAxisTicks", yAxisTicks);
     model.addAttribute("chartPlotStartX", CHART_PAD_LEFT);
     model.addAttribute("chartPlotEndX", CHART_WIDTH - CHART_PAD_RIGHT);
+    model.addAttribute("chartPlotTopY", CHART_PAD_TOP);
+    model.addAttribute("chartPlotBottomY", CHART_HEIGHT - CHART_PAD_BOTTOM);
+    model.addAttribute("chartPlotWidth", round(chartPlotWidth()));
+    model.addAttribute("chartZeroY", resolveZeroY(min, max));
     model.addAttribute("chartDebitMarkers", debitMarkers);
     model.addAttribute("chartTickStart", labelFormatter.format(points.get(0).date()));
     model.addAttribute("chartTickMiddle", labelFormatter.format(points.get(points.size() / 2).date()));
@@ -383,6 +387,23 @@ public class PartialsController {
 
   private int resolveRangeDays(String range) {
     return 30;
+  }
+
+  private int resolveZeroY(long min, long max) {
+    int plotTop = CHART_PAD_TOP;
+    int plotBottom = CHART_HEIGHT - CHART_PAD_BOTTOM;
+
+    if (max < 0) {
+      return plotTop;
+    }
+    if (min >= 0) {
+      return plotBottom;
+    }
+
+    long range = Math.max(1L, max - min);
+    double ratio = max / (double) range;
+    int zeroY = round(CHART_PAD_TOP + ratio * chartPlotHeight());
+    return Math.max(plotTop, Math.min(plotBottom, zeroY));
   }
 
   private String formatAmount(long cents, Locale locale) {

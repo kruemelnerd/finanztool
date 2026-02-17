@@ -34,7 +34,7 @@ Zuletzt aktualisiert: 2026-02-17
 - [ ] Error-States mit Retry fuer Partials (insb. Overview-Chart) einfuehren
 - [x] CSV-Encoding/Umlaute robust behandeln, damit Umlaute in Imports korrekt dargestellt werden
 - [x] Gezielte Testfaelle fuer ReferenceText-Deduplizierung erweitern
-- [ ] Chart-Farbe dynamisch: bei Minus rot, bei Plus gruen
+- [x] Chart-Farbe dynamisch: bei Minus rot, bei Plus gruen
 
 ## Hinweis fuer naechste Session
 

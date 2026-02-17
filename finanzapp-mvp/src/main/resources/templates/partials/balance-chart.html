@@ -14,6 +14,12 @@
           <stop offset="0%" stop-color="#4ecda0" stop-opacity="0.35" />
           <stop offset="100%" stop-color="#4ecda0" stop-opacity="0.03" />
         </linearGradient>
+        <clipPath id="line-clip-positive">
+          <rect th:attr="x=${chartPlotStartX}, y=${chartPlotTopY}, width=${chartPlotWidth}, height=${chartZeroY - chartPlotTopY}"></rect>
+        </clipPath>
+        <clipPath id="line-clip-negative">
+          <rect th:attr="x=${chartPlotStartX}, y=${chartZeroY}, width=${chartPlotWidth}, height=${chartPlotBottomY - chartZeroY}"></rect>
+        </clipPath>
       </defs>
 
       <g class="line-chart-grid">
@@ -30,7 +36,8 @@
       </g>
 
       <path th:attr="d=${chartAreaPoints}" fill="url(#line-fill)"></path>
-      <path th:attr="d=${chartLinePoints}" fill="none" stroke="#27b788" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+      <path class="line-chart-line-positive" th:attr="d=${chartLinePoints}" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#line-clip-positive)"></path>
+      <path class="line-chart-line-negative" th:attr="d=${chartLinePoints}" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#line-clip-negative)"></path>
 
       <g class="line-chart-markers">
         <g class="line-chart-marker"

@@ -151,4 +151,39 @@ class PartialsControllerTest {
         .andExpect(content().string(containsString("Salary")))
         .andExpect(content().string(containsString("993,44 EUR")));
   }
+
+  @Test
+  void balanceChartSplitsLineColorAtZeroThreshold() throws Exception {
+    User user = userRepository.findByEmail("threshold-user@example.com").orElseGet(() -> {
+      User created = new User();
+      created.setEmail("threshold-user@example.com");
+      created.setPasswordHash("hashed");
+      created.setLanguage("EN");
+      return userRepository.save(created);
+    });
+    user.setLanguage("EN");
+    userRepository.save(user);
+
+    balanceDailyRepository.deleteByUser(user);
+    transactionRepository.deleteByUser(user);
+
+    BalanceDaily first = new BalanceDaily();
+    first.setUser(user);
+    first.setDate(LocalDate.now().minusDays(1));
+    first.setBalanceCentsEndOfDay(-5000L);
+
+    BalanceDaily second = new BalanceDaily();
+    second.setUser(user);
+    second.setDate(LocalDate.now());
+    second.setBalanceCentsEndOfDay(12000L);
+
+    balanceDailyRepository.saveAll(java.util.List.of(first, second));
+
+    mockMvc.perform(get("/partials/balance-chart").with(user("threshold-user@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("line-chart-line-positive")))
+        .andExpect(content().string(containsString("line-chart-line-negative")))
+        .andExpect(content().string(containsString("line-clip-positive")))
+        .andExpect(content().string(containsString("line-clip-negative")));
+  }
 }
