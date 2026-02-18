@@ -6,7 +6,7 @@
     <title th:text="${#messages.msgOrNull(pageTitle)} ?: #{app.title}">Finanzapp</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" th:href="@{/css/app.css}" />
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   </head>
@@ -14,13 +14,25 @@
     <div class="app-shell">
       <aside class="sidebar">
         <div class="brand" th:text="#{app.title}">Finanzapp</div>
-        <nav class="nav">
-          <a th:href="@{/overview}" th:text="#{nav.overview}">Overview</a>
-          <a th:href="@{/transactions}" th:text="#{nav.transactions}">Expenses</a>
+        <nav class="nav" th:with="currentPage=${pageTitle} ?: ''">
+          <a
+              th:href="@{/overview}"
+              th:classappend="${currentPage == 'page.overview'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.overview'} ? 'page' : null"
+              th:text="#{nav.overview}">Overview</a>
+          <a
+              th:href="@{/transactions}"
+              th:classappend="${currentPage == 'page.transactions'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.transactions'} ? 'page' : null"
+              th:text="#{nav.transactions}">Expenses</a>
           <a href="#" th:text="#{nav.budgets}">Budgets</a>
           <a href="#" th:text="#{nav.investments}">Investments</a>
           <a href="#" th:text="#{nav.reports}">Reports</a>
-          <a th:href="@{/settings}" th:text="#{nav.settings}">Settings</a>
+          <a
+              th:href="@{/settings}"
+              th:classappend="${currentPage == 'page.settings'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.settings'} ? 'page' : null"
+              th:text="#{nav.settings}">Settings</a>
         </nav>
       </aside>
       <main class="content">
