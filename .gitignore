@@ -17,3 +17,6 @@
 **/.classpath
 **/.project
 **/.settings/
+
+# Local agent/tooling workspace
+/.opencode/
