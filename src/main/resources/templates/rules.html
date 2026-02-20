@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="rules">
+    <div
+      class="notice"
+      th:if="${rulesMessage}"
+      th:classappend="${rulesStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${rulesMessage}">Rules status</span>
+    </div>
+
+    <div class="rules-toolbar">
+      <a class="button-link" th:href="@{/rules/new}" th:text="#{rules.new}">New rule</a>
+      <form th:action="@{/rules/run-all}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <button type="submit" th:text="#{rules.runAll}">Apply rules</button>
+      </form>
+    </div>
+
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th th:text="#{rules.name}">Name</th>
+          <th th:text="#{rules.matchText}">Search text</th>
+          <th th:text="#{rules.field}">Field</th>
+          <th th:text="#{rules.category}">Category</th>
+          <th th:text="#{rules.active}">Active</th>
+          <th th:text="#{rules.lastRun}">Last run</th>
+          <th th:text="#{rules.matches}">Matches</th>
+          <th th:text="#{rules.actions}">Actions</th>
+        </tr>
+      </thead>
+      <tbody th:if="${#lists.isEmpty(rules)}">
+        <tr>
+          <td colspan="8" class="empty-state" th:text="#{rules.empty}">No rules configured yet.</td>
+        </tr>
+      </tbody>
+      <tbody th:if="${!#lists.isEmpty(rules)}">
+        <tr th:each="rule : ${rules}">
+          <td th:text="${rule.name}">McDonalds - FastFood</td>
+          <td th:text="${rule.matchText}">mcdonalds</td>
+          <td>
+            <span th:switch="${rule.matchField.name()}">
+              <span th:case="'BOOKING_TEXT'" th:text="#{rules.matchField.BOOKING_TEXT}">Booking text</span>
+              <span th:case="'PARTNER_NAME'" th:text="#{rules.matchField.PARTNER_NAME}">Partner name</span>
+              <span th:case="*" th:text="#{rules.matchField.BOTH}">Both</span>
+            </span>
+          </td>
+          <td th:text="${rule.categoryLabel}">Shopping -> FastFood</td>
+          <td>
+            <span
+              class="rule-state"
+              th:classappend="${rule.active} ? ' rule-state-active' : ' rule-state-inactive'"
+              th:text="${rule.active} ? #{rules.activeYes} : #{rules.activeNo}">Yes</span>
+          </td>
+          <td th:text="${rule.lastRunLabel}">-</td>
+          <td th:text="${rule.lastMatchCount}">0</td>
+          <td>
+            <div class="rule-actions">
+              <form th:action="@{'/rules/' + ${rule.id} + '/run'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:text="#{rules.run}">Run</button>
+              </form>
+
+              <a class="button-link" th:href="@{'/rules/' + ${rule.id} + '/edit'}" th:text="#{rules.edit}">Edit</a>
+
+              <form th:action="@{'/rules/' + ${rule.id} + '/toggle'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:text="${rule.active} ? #{rules.deactivate} : #{rules.activate}">Toggle</button>
+              </form>
+
+              <form th:action="@{'/rules/' + ${rule.id} + '/move-up'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:disabled="${!rule.canMoveUp}" th:text="#{rules.moveUp}">Up</button>
+              </form>
+
+              <form th:action="@{'/rules/' + ${rule.id} + '/move-down'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:disabled="${!rule.canMoveDown}" th:text="#{rules.moveDown}">Down</button>
+              </form>
+
+              <form
+                th:action="@{'/rules/' + ${rule.id} + '/delete'}"
+                method="post"
+                onsubmit="return confirm(this.dataset.confirm);"
+                th:attr="data-confirm=#{confirm.deleteRule}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:text="#{rules.delete}">Delete</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+</html>

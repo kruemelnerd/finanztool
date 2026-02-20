@@ -139,6 +139,9 @@ All commands below assume current directory is repository root.
 - Cucumber features live in `src/test/resources/features/` with glue under `com.example.finanzapp.cucumber`.
 - Playwright tests run headless and are used for end-to-end UI verification.
 
+## Communication preferences
+- Always communicate with the user in German.
+
 ## Agent workflow expectations
 - Make the smallest safe change that satisfies the task.
 - Preserve package structure and naming patterns already used.

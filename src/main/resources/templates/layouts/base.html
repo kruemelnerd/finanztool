@@ -36,9 +36,18 @@
               th:classappend="${currentPage == 'page.transactions'} ? ' is-active'"
               th:attr="aria-current=${currentPage == 'page.transactions'} ? 'page' : null"
               th:text="#{nav.transactions}">Expenses</a>
+          <a
+              th:href="@{/rules}"
+              th:classappend="${currentPage == 'page.rules'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.rules'} ? 'page' : null"
+              th:text="#{nav.rules}">Rules</a>
           <a href="#" th:text="#{nav.budgets}">Budgets</a>
           <a href="#" th:text="#{nav.investments}">Investments</a>
-          <a href="#" th:text="#{nav.reports}">Reports</a>
+          <a
+              th:href="@{/reports/sankey}"
+              th:classappend="${currentPage == 'page.sankey'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.sankey'} ? 'page' : null"
+              th:text="#{nav.reports}">Reports</a>
           <a
               th:href="@{/settings}"
               th:classappend="${currentPage == 'page.settings'} ? ' is-active'"

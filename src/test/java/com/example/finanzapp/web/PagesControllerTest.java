@@ -2,6 +2,7 @@ package com.example.finanzapp.web;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -10,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -18,9 +20,12 @@ import com.example.finanzapp.importcsv.CsvImportException;
 import com.example.finanzapp.importcsv.CsvUploadService;
 import com.example.finanzapp.domain.Category;
 import com.example.finanzapp.domain.CategoryAssignedBy;
+import com.example.finanzapp.domain.Rule;
+import com.example.finanzapp.domain.RuleMatchField;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.CategoryRepository;
+import com.example.finanzapp.repository.RuleRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import com.example.finanzapp.settings.DataDeletionService;
@@ -60,6 +65,9 @@ class PagesControllerTest {
 
   @Autowired
   private CategoryRepository categoryRepository;
+
+  @Autowired
+  private RuleRepository ruleRepository;
 
   @MockBean
   private CsvUploadService csvUploadService;
@@ -108,6 +116,202 @@ class PagesControllerTest {
     mockMvc.perform(get("/settings").with(user("user")))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("Delete account")));
+  }
+
+  @Test
+  void rulesPageLoadsForAuthenticatedUser() throws Exception {
+    mockMvc.perform(get("/rules").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Search text")));
+  }
+
+  @Test
+  void sankeyPageLoadsForAuthenticatedUser() throws Exception {
+    mockMvc.perform(get("/reports/sankey").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Year")));
+  }
+
+  @Test
+  void sankeyApiReturnsIncomeAndExpenseFlowsForSelectedYear() throws Exception {
+    createUser("sankey-user@example.com");
+    User owner = userRepository.findByEmail("sankey-user@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Sankey Parent");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sankey Sub");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Transaction income = new Transaction();
+    income.setUser(owner);
+    income.setBookingDateTime(LocalDateTime.of(2025, 2, 5, 12, 0));
+    income.setPartnerName("Employer");
+    income.setPurposeText("Salary");
+    income.setAmountCents(150000L);
+    income.setCategory(sub);
+    transactionRepository.save(income);
+
+    Transaction expense = new Transaction();
+    expense.setUser(owner);
+    expense.setBookingDateTime(LocalDateTime.of(2025, 2, 7, 18, 0));
+    expense.setPartnerName("Supermarkt");
+    expense.setPurposeText("Groceries");
+    expense.setAmountCents(-4200L);
+    expense.setCategory(sub);
+    transactionRepository.save(expense);
+
+    mockMvc.perform(get("/api/reports/sankey")
+            .with(user("sankey-user@example.com"))
+            .param("year", "2025"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.year", is(2025)))
+        .andExpect(jsonPath("$.links[?(@.source=='income')].valueCents", hasItem(150000)))
+        .andExpect(jsonPath("$.links[?(@.source=='expense')].valueCents", hasItem(4200)));
+  }
+
+  @Test
+  void createRulePersistsRule() throws Exception {
+    createUser("rules-create@example.com");
+    User owner = userRepository.findByEmail("rules-create@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    mockMvc.perform(post("/rules")
+            .with(user("rules-create@example.com"))
+            .with(csrf())
+            .param("name", "InterSport")
+            .param("matchText", "intersport")
+            .param("matchField", "BOTH")
+            .param("categoryId", sub.getId().toString()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/rules"))
+        .andExpect(flash().attribute("rulesStatus", "success"));
+
+    java.util.List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner);
+    org.assertj.core.api.Assertions.assertThat(rules).hasSize(1);
+    org.assertj.core.api.Assertions.assertThat(rules.get(0).getName()).isEqualTo("InterSport");
+    org.assertj.core.api.Assertions.assertThat(rules.get(0).getMatchField()).isEqualTo(RuleMatchField.BOTH);
+    org.assertj.core.api.Assertions.assertThat(rules.get(0).getCategory().getId()).isEqualTo(sub.getId());
+  }
+
+  @Test
+  void moveRuleUpSwapsOrder() throws Exception {
+    createUser("rules-order@example.com");
+    User owner = userRepository.findByEmail("rules-order@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Rule first = new Rule();
+    first.setUser(owner);
+    first.setName("Rule One");
+    first.setMatchText("one");
+    first.setMatchField(RuleMatchField.BOTH);
+    first.setCategory(sub);
+    first.setSortOrder(0);
+    first = ruleRepository.save(first);
+
+    Rule second = new Rule();
+    second.setUser(owner);
+    second.setName("Rule Two");
+    second.setMatchText("two");
+    second.setMatchField(RuleMatchField.BOTH);
+    second.setCategory(sub);
+    second.setSortOrder(1);
+    second = ruleRepository.save(second);
+
+    mockMvc.perform(post("/rules/" + second.getId() + "/move-up")
+            .with(user("rules-order@example.com"))
+            .with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/rules"))
+        .andExpect(flash().attribute("rulesStatus", "success"));
+
+    java.util.List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner);
+    org.assertj.core.api.Assertions.assertThat(rules).hasSize(2);
+    org.assertj.core.api.Assertions.assertThat(rules.get(0).getId()).isEqualTo(second.getId());
+    org.assertj.core.api.Assertions.assertThat(rules.get(1).getId()).isEqualTo(first.getId());
+  }
+
+  @Test
+  void runSingleRuleUpdatesMatchingTransactionAndRuleMetadata() throws Exception {
+    createUser("rules-run@example.com");
+    User owner = userRepository.findByEmail("rules-run@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Rule rule = new Rule();
+    rule.setUser(owner);
+    rule.setName("InterSport");
+    rule.setMatchText("intersport");
+    rule.setMatchField(RuleMatchField.BOTH);
+    rule.setCategory(sub);
+    rule.setSortOrder(0);
+    rule = ruleRepository.save(rule);
+
+    Transaction transaction = new Transaction();
+    transaction.setUser(owner);
+    transaction.setBookingDateTime(LocalDateTime.of(2026, 2, 8, 10, 0));
+    transaction.setPartnerName("InterSport Berlin");
+    transaction.setPurposeText("Buchungstext: Schuhe");
+    transaction.setAmountCents(-4900L);
+    transaction = transactionRepository.save(transaction);
+
+    mockMvc.perform(post("/rules/" + rule.getId() + "/run")
+            .with(user("rules-run@example.com"))
+            .with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/rules"))
+        .andExpect(flash().attribute("rulesStatus", "success"));
+
+    Rule updatedRule = ruleRepository.findById(rule.getId()).orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(updatedRule.getLastRunAt()).isNotNull();
+    org.assertj.core.api.Assertions.assertThat(updatedRule.getLastMatchCount()).isEqualTo(1);
+
+    Transaction updatedTx = transactionRepository.findById(transaction.getId()).orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(updatedTx.getCategory()).isNotNull();
+    org.assertj.core.api.Assertions.assertThat(updatedTx.getCategory().getId()).isEqualTo(sub.getId());
+    org.assertj.core.api.Assertions.assertThat(updatedTx.getCategoryAssignedBy()).isEqualTo(CategoryAssignedBy.RULE);
   }
 
   @Test
@@ -241,9 +445,7 @@ class PagesControllerTest {
   }
 
   private void createUser(String email) {
-    if (userRepository.existsByEmail(email)) {
-      return;
-    }
+    userRepository.findByEmail(email).ifPresent(userRepository::delete);
     User user = new User();
     user.setEmail(email);
     user.setPasswordHash("hashed");

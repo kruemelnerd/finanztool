@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="sankey-report">
+    <div class="sankey-toolbar">
+      <form method="get" th:action="@{/reports/sankey}">
+        <label>
+          <span th:text="#{sankey.year}">Year</span>
+          <select name="year" onchange="this.form.submit()">
+            <option
+              th:each="yearOption : ${yearOptions}"
+              th:value="${yearOption}"
+              th:selected="${yearOption == selectedYear}"
+              th:text="${yearOption}">2025</option>
+          </select>
+        </label>
+      </form>
+    </div>
+
+    <div
+      id="sankey-root"
+      class="sankey-shell"
+      th:attr="data-year=${selectedYear},data-income-label=#{sankey.source.income},data-expense-label=#{sankey.source.expense}">
+      <svg id="sankey-chart" viewBox="0 0 980 520" role="img" aria-label="Sankey chart"></svg>
+      <p id="sankey-empty" class="empty-state" th:text="#{sankey.empty}">No data for selected year.</p>
+    </div>
+
+    <script>
+      (() => {
+        const root = document.getElementById("sankey-root");
+        const svg = document.getElementById("sankey-chart");
+        const emptyState = document.getElementById("sankey-empty");
+        if (!root || !svg || !emptyState) {
+          return;
+        }
+
+        const selectedYear = root.dataset.year;
+        const incomeLabel = root.dataset.incomeLabel || "Income";
+        const expenseLabel = root.dataset.expenseLabel || "Expense";
+
+        const byId = (list) => {
+          const map = new Map();
+          list.forEach((item) => map.set(item.id, item));
+          return map;
+        };
+
+        const clearSvg = () => {
+          while (svg.firstChild) {
+            svg.removeChild(svg.firstChild);
+          }
+        };
+
+        const addNode = (x, y, label) => {
+          const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          rect.setAttribute("x", x);
+          rect.setAttribute("y", y);
+          rect.setAttribute("width", "170");
+          rect.setAttribute("height", "32");
+          rect.setAttribute("rx", "8");
+          rect.setAttribute("class", "sankey-node");
+          group.appendChild(rect);
+
+          const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          text.setAttribute("x", x + 10);
+          text.setAttribute("y", y + 21);
+          text.setAttribute("class", "sankey-node-label");
+          text.textContent = label;
+          group.appendChild(text);
+
+          svg.appendChild(group);
+        };
+
+        const addLink = (sourceX, sourceY, targetX, targetY, value, maxValue, linkClass) => {
+          const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          const controlX = (sourceX + targetX) / 2;
+          const d = `M ${sourceX} ${sourceY} C ${controlX} ${sourceY}, ${controlX} ${targetY}, ${targetX} ${targetY}`;
+          path.setAttribute("d", d);
+          path.setAttribute("class", `sankey-link ${linkClass}`);
+          const width = maxValue <= 0 ? 3 : Math.max(3, (value / maxValue) * 28);
+          path.setAttribute("stroke-width", String(width));
+          svg.appendChild(path);
+        };
+
+        fetch(`/api/reports/sankey?year=${encodeURIComponent(selectedYear)}`)
+          .then((response) => response.json())
+          .then((data) => {
+            clearSvg();
+            const links = Array.isArray(data.links) ? data.links : [];
+            const nodes = Array.isArray(data.nodes) ? data.nodes : [];
+            if (links.length === 0 || nodes.length === 0) {
+              svg.style.display = "none";
+              emptyState.style.display = "block";
+              return;
+            }
+
+            svg.style.display = "block";
+            emptyState.style.display = "none";
+
+            const nodeMap = byId(nodes);
+            const categoryNodes = nodes
+              .filter((node) => node.id !== "income" && node.id !== "expense")
+              .sort((a, b) => a.label.localeCompare(b.label));
+
+            const categoryGap = categoryNodes.length <= 1 ? 72 : Math.max(36, Math.floor(380 / (categoryNodes.length - 1)));
+            const nodePositions = new Map();
+            nodePositions.set("income", { x: 40, y: 120 });
+            nodePositions.set("expense", { x: 40, y: 320 });
+
+            categoryNodes.forEach((node, index) => {
+              nodePositions.set(node.id, { x: 760, y: 40 + index * categoryGap });
+            });
+
+            const maxValue = links.reduce((max, link) => Math.max(max, Number(link.valueCents || 0)), 0);
+
+            links.forEach((link) => {
+              const source = nodePositions.get(link.source);
+              const target = nodePositions.get(link.target);
+              if (!source || !target) {
+                return;
+              }
+              const sourceCenterY = source.y + 16;
+              const targetCenterY = target.y + 16;
+              addLink(
+                source.x + 170,
+                sourceCenterY,
+                target.x,
+                targetCenterY,
+                Number(link.valueCents || 0),
+                maxValue,
+                link.source === "income" ? "sankey-link-income" : "sankey-link-expense");
+            });
+
+            nodePositions.forEach((position, nodeId) => {
+              const node = nodeMap.get(nodeId);
+              if (!node) {
+                return;
+              }
+              let label = node.label;
+              if (nodeId === "income") {
+                label = incomeLabel;
+              }
+              if (nodeId === "expense") {
+                label = expenseLabel;
+              }
+              addNode(position.x, position.y, label);
+            });
+          })
+          .catch(() => {
+            svg.style.display = "none";
+            emptyState.style.display = "block";
+          });
+      })();
+    </script>
+  </section>
+</html>

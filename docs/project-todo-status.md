@@ -49,9 +49,9 @@ Zuletzt aktualisiert: 2026-02-20
 - [x] RuleEngine bauen (Reihenfolge: first match wins, Konflikte als Rule-IDs)
 - [x] Backfill und Single-Rule-Run bauen (RULE ueberschreibbar, MANUAL nie ueberschreiben)
 - [~] Transaktionen erweitert: Kategorie-Spalte, Warn-Icon, Filter nur Default, manuelle Kategorie + Lock (UI/Controller/Tests umgesetzt; Finetuning laeuft)
-- [ ] Regeln-Seite `/rules` bauen (Liste, Create/Edit, Toggle, Move up/down, Run one, Run all)
-- [ ] Sankey-API und Seite bauen (`/api/reports/sankey`, `/reports/sankey`) mit Jahr-Dropdown
-- [ ] i18n fuer alle neuen Texte/Fehler/Warnungen DE/EN erweitern
+- [x] Regeln-Seite `/rules` gebaut (Liste, Create/Edit, Toggle, Move up/down, Run one, Run all + Delete)
+- [x] Sankey-API und Seite gebaut (`/api/reports/sankey`, `/reports/sankey`) mit Jahr-Dropdown
+- [x] i18n fuer alle neuen Texte/Fehler/Warnungen DE/EN erweitert
 - [x] Tests erweitern (Unit, Integration, Cucumber/UI) und danach `mvn test`
 
 ### Statusupdate (Start Umsetzung)
@@ -59,7 +59,9 @@ Zuletzt aktualisiert: 2026-02-20
 - Erste 3 Punkte umgesetzt (Schema, Migrationen, Bootstrap ohne Bestandsmigration)
 - Danach umgesetzt: Normalizer + RuleEngine + AssignmentService (inkl. Import-Integration)
 - Transaktions-Tabelle auf HTMX-Filterfluss angepasst; Playwright-Test auf asynchrones Reload-Waiting gehaertet
-- Teststatus aktuell: `mvn test` erfolgreich (155 Tests, 0 Failures)
+- Regeln-Seite umgesetzt inkl. Form-Flows, Reihenfolge, Aktiv-Toggle und Run-Buttons
+- Sankey-Report umgesetzt (Seite + API + Jahr-Dropdown + Basisdiagramm)
+- Teststatus aktuell: `mvn test` erfolgreich (161 Tests, 0 Failures)
 
 ## Umsetzungsplan (durchgefuehrt)
 

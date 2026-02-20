@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="rules-form-page">
+    <div class="card">
+      <div class="card-title" th:text="${editMode} ? #{rules.form.editTitle} : #{rules.form.createTitle}">Create rule</div>
+      <form th:action="${editMode} ? @{'/rules/' + ${ruleId}} : @{/rules}" method="post" class="stack">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+
+        <label>
+          <span th:text="#{rules.form.name}">Rule name</span>
+          <input type="text" name="name" maxlength="120" required th:value="${ruleName}" />
+        </label>
+
+        <label>
+          <span th:text="#{rules.form.matchText}">Search text</span>
+          <input type="text" name="matchText" maxlength="120" required th:value="${matchText}" />
+        </label>
+
+        <label>
+          <span th:text="#{rules.form.matchField}">Field</span>
+          <select name="matchField">
+            <option
+              th:each="field : ${matchFields}"
+              th:value="${field.name()}"
+              th:selected="${field.name() == selectedMatchField}"
+              th:text="#{${'rules.matchField.' + field.name()}}">Both</option>
+          </select>
+        </label>
+
+        <label>
+          <span th:text="#{rules.form.category}">Category</span>
+          <select name="categoryId" required>
+            <option
+              th:each="option : ${categoryOptions}"
+              th:value="${option.id}"
+              th:selected="${option.id == selectedCategoryId}"
+              th:text="${option.label}">Shopping -> FastFood</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <button type="submit" th:text="#{rules.form.save}">Save</button>
+          <a class="button-link" th:href="@{/rules}" th:text="#{rules.form.cancel}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </section>
+</html>

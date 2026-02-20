@@ -711,6 +711,117 @@ button:disabled {
   font-size: 12px;
 }
 
+.rules,
+.rules-form-page {
+  display: grid;
+  gap: 14px;
+}
+
+.rules-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rules-toolbar form {
+  margin: 0;
+}
+
+.rule-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.rule-actions form {
+  margin: 0;
+}
+
+.rule-actions button,
+.rule-actions .button-link {
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
+.rule-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-pill);
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.rule-state-active {
+  background: rgba(220, 252, 231, 0.72);
+  color: #166534;
+  border: 1px solid rgba(22, 163, 74, 0.32);
+}
+
+.rule-state-inactive {
+  background: rgba(241, 245, 249, 0.8);
+  color: #475569;
+  border: 1px solid rgba(148, 163, 184, 0.45);
+}
+
+.sankey-report {
+  display: grid;
+  gap: 16px;
+}
+
+.sankey-toolbar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+}
+
+.sankey-shell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 12px;
+}
+
+#sankey-chart {
+  width: 100%;
+  min-height: 420px;
+  display: block;
+}
+
+.sankey-node {
+  fill: #f8f2ea;
+  stroke: #d9c7b0;
+  stroke-width: 1;
+}
+
+.sankey-node-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--text);
+}
+
+.sankey-link {
+  fill: none;
+  stroke-linecap: round;
+  opacity: 0.78;
+}
+
+.sankey-link-income {
+  stroke: #22a06b;
+}
+
+.sankey-link-expense {
+  stroke: #d4554f;
+}
+
+#sankey-empty {
+  margin: 12px;
+}
+
 .table-pagination {
   margin-top: 14px;
   display: flex;
