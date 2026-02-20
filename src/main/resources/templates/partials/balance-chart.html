@@ -1,0 +1,86 @@
+<div class="chart" th:if="${chartError}">
+  <div class="notice notice-error">
+    <span th:text="${chartErrorMessage}">Chart loading failed.</span>
+    <button
+      type="button"
+      th:attr="hx-get=${chartRetryPath}"
+      hx-trigger="click"
+      hx-target="closest .card-body"
+      hx-swap="innerHTML"
+      th:text="#{partial.retry}">Retry</button>
+  </div>
+</div>
+
+<div class="chart" th:if="${chartEmpty and !chartError}">
+  <div class="empty-state" th:text="#{chart.empty}">No balance data available.</div>
+</div>
+
+<div class="chart" th:if="${!chartEmpty and !chartError}">
+  <div class="line-chart-wrap">
+    <svg class="line-chart" viewBox="0 0 860 230" preserveAspectRatio="none" role="img" aria-label="Balance chart">
+      <defs>
+        <linearGradient id="line-fill" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#4ecda0" stop-opacity="0.35" />
+          <stop offset="100%" stop-color="#4ecda0" stop-opacity="0.03" />
+        </linearGradient>
+        <clipPath id="line-clip-positive">
+          <rect th:attr="x=${chartPlotStartX}, y=${chartPlotTopY}, width=${chartPlotWidth}, height=${chartZeroY - chartPlotTopY}"></rect>
+        </clipPath>
+        <clipPath id="line-clip-negative">
+          <rect th:attr="x=${chartPlotStartX}, y=${chartZeroY}, width=${chartPlotWidth}, height=${chartPlotBottomY - chartZeroY}"></rect>
+        </clipPath>
+      </defs>
+
+      <g class="line-chart-grid">
+        <line th:each="tick : ${chartYAxisTicks}"
+              th:attr="x1=${chartPlotStartX}, y1=${tick.y}, x2=${chartPlotEndX}, y2=${tick.y}"></line>
+      </g>
+
+      <g class="line-chart-y-axis">
+        <text class="line-chart-y-label" x="16" y="115" transform="rotate(-90 16 115)" th:text="#{chart.yAxisLabel}">Balance (EUR)</text>
+        <text class="line-chart-y-tick"
+              th:each="tick : ${chartYAxisTicks}"
+              th:attr="x=${chartPlotStartX - 10}, y=${tick.y + 4}"
+              th:text="${tick.label}">0 EUR</text>
+      </g>
+
+      <path th:attr="d=${chartAreaPoints}" fill="url(#line-fill)"></path>
+      <path class="line-chart-line-positive" th:attr="d=${chartLinePoints}" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#line-clip-positive)"></path>
+      <path class="line-chart-line-negative" th:attr="d=${chartLinePoints}" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" clip-path="url(#line-clip-negative)"></path>
+
+      <g class="line-chart-markers">
+        <g class="line-chart-marker"
+           th:each="marker : ${chartDebitMarkers}"
+           tabindex="0"
+           th:attr="transform='translate(' + ${marker.x} + ',' + ${marker.y} + ')'">
+          <circle class="line-chart-marker-hit" r="11"></circle>
+          <circle class="line-chart-marker-dot" r="4"></circle>
+          <g class="line-chart-tooltip"
+             th:attr="transform='translate(' + ${marker.tooltipOffsetX} + ',' + ${marker.tooltipOffsetY} + ')'">
+            <rect rx="8"
+                  ry="8"
+                  th:attr="width=${marker.tooltipWidth}, height=${marker.tooltipHeight}"></rect>
+            <text class="line-chart-tooltip-title"
+                  x="10"
+                  y="18"
+                  th:text="#{chart.debitsOnDay(${marker.dayLabel})}">Debits on 01.01.2026</text>
+            <text class="line-chart-tooltip-balance"
+                  x="10"
+                  y="34"
+                  th:text="${marker.balanceLabel}">End-of-day balance: 100.00 EUR</text>
+            <text class="line-chart-tooltip-line"
+                  th:each="entry, stat : ${marker.lines}"
+                  x="10"
+                  th:attr="y=${52 + (stat.index * 16)}"
+                  th:text="${entry}">12:00  Store  -12.00 EUR</text>
+          </g>
+        </g>
+      </g>
+    </svg>
+    <div class="line-chart-ticks">
+      <span th:text="${chartTickStart}">01.01</span>
+      <span th:text="${chartTickMiddle}">15.01</span>
+      <span th:text="${chartTickEnd}">30.01</span>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="overview">
+    <div
+      class="notice"
+      th:if="${csvImportMessage}"
+      th:classappend="${csvImportStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${csvImportMessage}">CSV import status</span>
+    </div>
+    <div class="modal-backdrop" id="duplicate-modal" th:if="${csvImportDuplicates}" data-open="true" onclick="if (event.target === this) { closeDuplicateModal(); }">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="duplicate-modal-title">
+        <div class="modal-title" id="duplicate-modal-title" th:text="#{csv.duplicates.title}">Duplicate transactions detected</div>
+        <p class="modal-copy">
+          <strong th:text="${csvImportDuplicateCount}">0</strong>
+          <span th:text="#{csv.duplicates.message}">entries were already present and were not imported.</span>
+        </p>
+        <ul class="modal-list">
+          <li th:each="entry : ${csvImportDuplicates}" th:text="${entry}">2026-02-01 - Sample - -10.00 EUR</li>
+        </ul>
+        <div class="modal-actions">
+          <button type="button" onclick="closeDuplicateModal()" th:text="#{common.ok}">Ok</button>
+        </div>
+      </div>
+    </div>
+    <div class="welcome"><span th:text="#{overview.welcome}">Welcome back,</span> <span th:text="${displayName}">User</span></div>
+    <div class="overview-layout">
+      <div class="overview-top-row">
+        <article class="overview-balance-panel">
+          <div class="overview-balance-label" th:text="#{transactions.currentBalance}">Current balance</div>
+          <div class="overview-balance-amount" th:text="${currentBalanceAmount} ?: #{transactions.noCurrentBalance}">0.00 EUR</div>
+          <div class="overview-balance-meta">
+            <span th:text="#{overview.transactions}">Transactions</span>
+            <strong th:text="${transactionCount}">0</strong>
+          </div>
+          <div class="overview-balance-meta">
+            <span th:text="#{overview.lastImport}">Last import</span>
+            <strong th:text="${lastImportLabel} ?: #{overview.noImportsYet}">No imports yet</strong>
+          </div>
+          <form th:action="@{/overview/import-csv}" method="post" enctype="multipart/form-data" class="stack">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            <label>
+              <span th:text="#{overview.csvFile}">CSV file</span>
+              <input type="file" name="file" accept=".csv,text/csv" required />
+            </label>
+            <button type="submit" th:text="#{overview.uploadCsv}">Upload CSV</button>
+          </form>
+        </article>
+
+        <article class="overview-dummy-panel">
+          <div class="overview-dummy-title" th:text="#{overview.previewTitle}">Preview</div>
+          <div class="overview-dummy-image">
+            <div class="overview-dummy-badge" th:text="#{overview.placeholder}">Dummy Image</div>
+          </div>
+        </article>
+      </div>
+
+      <article class="overview-chart-panel">
+        <div class="card-title" th:text="#{overview.activityLast30Days}">Financial Activity (Last 30 Days)</div>
+        <div class="card-body" hx-get="/partials/balance-chart?range=30d" hx-trigger="load">
+          <span th:text="#{overview.loadingChart}">Loading chart...</span>
+        </div>
+      </article>
+
+      <article class="overview-recent-panel">
+        <div class="card-title" th:text="#{overview.lastBookings}">Last bookings</div>
+        <div class="card-body" hx-get="/partials/recent-transactions?limit=5" hx-trigger="load" hx-target="#recent-transactions" hx-swap="outerHTML">
+          <div id="recent-transactions" th:insert="~{partials/recent-transactions}" th:text="#{overview.loadingTransactions}">Loading transactions...</div>
+        </div>
+      </article>
+    </div>
+    <script th:if="${csvImportDuplicates}">
+      function closeDuplicateModal() {
+        const modal = document.getElementById("duplicate-modal");
+        if (!modal) {
+          return;
+        }
+        modal.remove();
+      }
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+          closeDuplicateModal();
+        }
+      });
+    </script>
+  </section>
+</html>
