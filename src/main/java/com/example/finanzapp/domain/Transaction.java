@@ -2,6 +2,8 @@ package com.example.finanzapp.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -57,6 +59,20 @@ public class Transaction {
 
   @Column(name = "reference_text")
   private String referenceText;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "category_id")
+  private Category category;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "category_assigned_by")
+  private CategoryAssignedBy categoryAssignedBy;
+
+  @Column(name = "category_locked", nullable = false)
+  private boolean categoryLocked;
+
+  @Column(name = "rule_conflicts")
+  private String ruleConflicts;
 
   @Column(name = "amount_cents", nullable = false)
   private long amountCents;
@@ -184,6 +200,38 @@ public class Transaction {
 
   public void setReferenceText(String referenceText) {
     this.referenceText = referenceText;
+  }
+
+  public Category getCategory() {
+    return category;
+  }
+
+  public void setCategory(Category category) {
+    this.category = category;
+  }
+
+  public CategoryAssignedBy getCategoryAssignedBy() {
+    return categoryAssignedBy;
+  }
+
+  public void setCategoryAssignedBy(CategoryAssignedBy categoryAssignedBy) {
+    this.categoryAssignedBy = categoryAssignedBy;
+  }
+
+  public boolean isCategoryLocked() {
+    return categoryLocked;
+  }
+
+  public void setCategoryLocked(boolean categoryLocked) {
+    this.categoryLocked = categoryLocked;
+  }
+
+  public String getRuleConflicts() {
+    return ruleConflicts;
+  }
+
+  public void setRuleConflicts(String ruleConflicts) {
+    this.ruleConflicts = ruleConflicts;
   }
 
   public long getAmountCents() {

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.finanzapp.categories.CategoryBootstrapService;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,11 +25,14 @@ class RegistrationServiceTest {
   @Mock
   private PasswordEncoder passwordEncoder;
 
+  @Mock
+  private CategoryBootstrapService categoryBootstrapService;
+
   private RegistrationService registrationService;
 
   @BeforeEach
   void setUp() {
-    registrationService = new RegistrationService(userRepository, passwordEncoder);
+    registrationService = new RegistrationService(userRepository, passwordEncoder, categoryBootstrapService);
   }
 
   @Test
@@ -63,6 +67,7 @@ class RegistrationServiceTest {
 
     assertThat(saved.getDisplayName()).isEqualTo("alex");
     assertThat(saved.getPasswordHash()).isEqualTo("hashed");
+    verify(categoryBootstrapService).ensureDefaultUncategorized(saved);
   }
 
   @Test
@@ -84,5 +89,6 @@ class RegistrationServiceTest {
 
     assertThat(saved.getDisplayName()).isEqualTo("Jane Doe");
     assertThat(saved.getLanguage()).isEqualTo("DE");
+    verify(categoryBootstrapService).ensureDefaultUncategorized(saved);
   }
 }

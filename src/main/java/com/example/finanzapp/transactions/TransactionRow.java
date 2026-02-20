@@ -7,4 +7,10 @@ public record TransactionRow(
     String date,
     String time,
     String status,
-    String amount) {}
+    String amount,
+    Integer categoryId,
+    String categoryLabel,
+    boolean defaultCategory,
+    String assignedBy,
+    boolean categoryLocked,
+    String conflictNames) {}

@@ -5,6 +5,7 @@ import com.example.finanzapp.balance.BalanceService;
 import com.example.finanzapp.domain.CsvArtifact;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
+import com.example.finanzapp.rules.CategoryAssignmentService;
 import com.example.finanzapp.repository.CsvArtifactRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import java.util.ArrayList;
@@ -26,15 +27,18 @@ public class CsvImportService {
   private final CsvArtifactRepository csvArtifactRepository;
   private final TransactionRepository transactionRepository;
   private final BalanceService balanceService;
+  private final CategoryAssignmentService categoryAssignmentService;
   private final CsvParser csvParser = new CsvParser();
 
   public CsvImportService(
       CsvArtifactRepository csvArtifactRepository,
       TransactionRepository transactionRepository,
-      BalanceService balanceService) {
+      BalanceService balanceService,
+      CategoryAssignmentService categoryAssignmentService) {
     this.csvArtifactRepository = csvArtifactRepository;
     this.transactionRepository = transactionRepository;
     this.balanceService = balanceService;
+    this.categoryAssignmentService = categoryAssignmentService;
   }
 
   @Transactional
@@ -83,6 +87,7 @@ public class CsvImportService {
     }
 
     if (!newTransactions.isEmpty()) {
+      categoryAssignmentService.assignForImport(user, newTransactions);
       transactionRepository.saveAll(newTransactions);
     }
 

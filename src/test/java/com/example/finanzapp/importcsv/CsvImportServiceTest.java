@@ -16,6 +16,7 @@ import com.example.finanzapp.balance.BalancePoint;
 import com.example.finanzapp.domain.CsvArtifact;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
+import com.example.finanzapp.rules.CategoryAssignmentService;
 import com.example.finanzapp.repository.CsvArtifactRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import java.nio.charset.StandardCharsets;
@@ -39,11 +40,18 @@ class CsvImportServiceTest {
   @Mock
   private BalanceService balanceService;
 
+  @Mock
+  private CategoryAssignmentService categoryAssignmentService;
+
   private CsvImportService csvImportService;
 
   @BeforeEach
   void setUp() {
-    csvImportService = new CsvImportService(csvArtifactRepository, transactionRepository, balanceService);
+    csvImportService = new CsvImportService(
+        csvArtifactRepository,
+        transactionRepository,
+        balanceService,
+        categoryAssignmentService);
   }
 
   @Test
@@ -105,6 +113,7 @@ class CsvImportServiceTest {
 
     verify(balanceService).computeLast30Days(eq(1000L), anyList());
     verify(balanceService).materializeLast30Days(user, points);
+    verify(categoryAssignmentService).assignForImport(eq(user), anyList());
   }
 
   @Test
@@ -157,6 +166,7 @@ class CsvImportServiceTest {
 
     assertThat(result.importedCount()).isEqualTo(0);
     assertThat(result.duplicateCount()).isEqualTo(1);
+    verify(categoryAssignmentService, never()).assignForImport(eq(user), anyList());
   }
 
   @Test

@@ -95,6 +95,7 @@ public class PartialsController {
       @RequestParam(name = "maxAmount", required = false) BigDecimal maxAmount,
       @RequestParam(name = "nameContains", required = false) String nameContains,
       @RequestParam(name = "purposeContains", required = false) String purposeContains,
+      @RequestParam(name = "onlyUncategorized", required = false, defaultValue = "false") boolean onlyUncategorized,
       @RequestParam(name = "page", required = false) Integer page,
       Model model) {
     try {
@@ -104,10 +105,12 @@ public class PartialsController {
           maxAmount,
           nameContains,
           purposeContains,
+          onlyUncategorized,
           page,
           PAGE_SIZE);
       model.addAttribute("transactions", transactionPage.rows());
       model.addAttribute("transactionsEmpty", transactionPage.rows().isEmpty());
+      model.addAttribute("categoryOptions", transactionViewService.loadCategoryOptions(userDetails));
       model.addAttribute("currentPage", transactionPage.page());
       model.addAttribute("totalPages", transactionPage.totalPages());
       model.addAttribute("totalItems", transactionPage.totalItems());
@@ -135,6 +138,7 @@ public class PartialsController {
               .queryParam("maxAmount", maxAmount)
               .queryParam("nameContains", nameContains)
               .queryParam("purposeContains", purposeContains)
+              .queryParam("onlyUncategorized", onlyUncategorized)
               .queryParam("page", page)
               .build()
               .toUriString());
@@ -143,6 +147,7 @@ public class PartialsController {
     model.addAttribute("maxAmount", maxAmount);
     model.addAttribute("nameContains", nameContains);
     model.addAttribute("purposeContains", purposeContains);
+    model.addAttribute("onlyUncategorized", onlyUncategorized);
     return "partials/transactions-table";
   }
 

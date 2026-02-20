@@ -1,19 +1,29 @@
 package com.example.finanzapp.transactions;
 
+import com.example.finanzapp.domain.Category;
+import com.example.finanzapp.domain.CategoryAssignedBy;
+import com.example.finanzapp.domain.Rule;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.balance.AccountBalanceService;
+import com.example.finanzapp.categories.CategoryBootstrapService;
+import com.example.finanzapp.repository.CategoryRepository;
+import com.example.finanzapp.repository.RuleRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.format.DateTimeFormatter;
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -28,14 +38,23 @@ public class TransactionViewService {
   private final TransactionRepository transactionRepository;
   private final UserRepository userRepository;
   private final AccountBalanceService accountBalanceService;
+  private final CategoryBootstrapService categoryBootstrapService;
+  private final CategoryRepository categoryRepository;
+  private final RuleRepository ruleRepository;
 
   public TransactionViewService(
       TransactionRepository transactionRepository,
       UserRepository userRepository,
-      AccountBalanceService accountBalanceService) {
+      AccountBalanceService accountBalanceService,
+      CategoryBootstrapService categoryBootstrapService,
+      CategoryRepository categoryRepository,
+      RuleRepository ruleRepository) {
     this.transactionRepository = transactionRepository;
     this.userRepository = userRepository;
     this.accountBalanceService = accountBalanceService;
+    this.categoryBootstrapService = categoryBootstrapService;
+    this.categoryRepository = categoryRepository;
+    this.ruleRepository = ruleRepository;
   }
 
   public List<TransactionRow> loadTransactions(
@@ -49,9 +68,10 @@ public class TransactionViewService {
         minAmount,
         maxAmount,
         exactName,
-        exactPurpose);
+        exactPurpose,
+        false);
     return loaded.transactions().stream()
-        .map(tx -> toRow(tx, loaded.locale()))
+        .map(tx -> toRow(tx, loaded.locale(), loaded.categoryDisplayById(), loaded.ruleNameById()))
         .toList();
   }
 
@@ -61,6 +81,7 @@ public class TransactionViewService {
       BigDecimal maxAmount,
       String nameContains,
       String purposeContains,
+      Boolean onlyUncategorized,
       Integer page,
       Integer pageSize) {
     LoadedTransactions loaded = loadFilteredTransactions(
@@ -68,7 +89,8 @@ public class TransactionViewService {
         minAmount,
         maxAmount,
         nameContains,
-        purposeContains);
+        purposeContains,
+        onlyUncategorized != null && onlyUncategorized);
 
     int safePageSize = normalizePageSize(pageSize);
     int totalItems = loaded.transactions().size();
@@ -78,7 +100,7 @@ public class TransactionViewService {
     int fromIndex = safePage * safePageSize;
     int toIndex = Math.min(fromIndex + safePageSize, totalItems);
     List<TransactionRow> rows = loaded.transactions().subList(fromIndex, toIndex).stream()
-        .map(tx -> toRow(tx, loaded.locale()))
+        .map(tx -> toRow(tx, loaded.locale(), loaded.categoryDisplayById(), loaded.ruleNameById()))
         .toList();
 
     return new TransactionPage(rows, safePage, safePageSize, totalPages, totalItems);
@@ -103,6 +125,49 @@ public class TransactionViewService {
         .orElse(null);
   }
 
+  public List<TransactionCategoryOption> loadCategoryOptions(UserDetails userDetails) {
+    Optional<User> user = resolveUser(userDetails);
+    if (user.isEmpty()) {
+      return List.of();
+    }
+
+    return buildCategoryDisplayById(user.get()).entrySet().stream()
+        .map(entry -> new TransactionCategoryOption(
+            entry.getKey(),
+            entry.getValue().label(),
+            entry.getValue().defaultCategory()))
+        .toList();
+  }
+
+  public boolean setManualCategory(UserDetails userDetails, Integer transactionId, Integer categoryId) {
+    if (transactionId == null || categoryId == null) {
+      return false;
+    }
+
+    Optional<User> user = resolveUser(userDetails);
+    if (user.isEmpty()) {
+      return false;
+    }
+
+    Optional<Transaction> transaction = transactionRepository.findByIdAndUserAndDeletedAtIsNull(transactionId, user.get());
+    Optional<Category> category = categoryRepository.findByIdAndUserAndDeletedAtIsNull(categoryId, user.get());
+    if (transaction.isEmpty() || category.isEmpty()) {
+      return false;
+    }
+
+    if (category.get().getParent() == null) {
+      return false;
+    }
+
+    Transaction tx = transaction.get();
+    tx.setCategory(category.get());
+    tx.setCategoryAssignedBy(CategoryAssignedBy.MANUAL);
+    tx.setCategoryLocked(true);
+    tx.setRuleConflicts(null);
+    transactionRepository.save(tx);
+    return true;
+  }
+
   public boolean softDeleteTransaction(UserDetails userDetails, Integer id) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty() || id == null) {
@@ -112,12 +177,21 @@ public class TransactionViewService {
     return updated > 0;
   }
 
-  private TransactionRow toRow(Transaction transaction, Locale locale) {
+  private TransactionRow toRow(
+      Transaction transaction,
+      Locale locale,
+      Map<Integer, CategoryDisplay> categoryDisplayById,
+      Map<Integer, String> ruleNameById) {
     String date = resolveDateFormatter(locale).format(transaction.getBookingDateTime());
     String time = TIME_FORMAT.format(transaction.getBookingDateTime());
     String name = sanitizeNameForDisplay(transaction.getPartnerName());
     String purpose = sanitizePurposeForDisplay(transaction.getPurposeText());
     String amount = formatAmount(transaction.getAmountCents(), locale);
+
+    Integer categoryId = transaction.getCategory() == null ? null : transaction.getCategory().getId();
+    CategoryDisplay categoryDisplay = categoryId == null ? null : categoryDisplayById.get(categoryId);
+    String conflictNames = resolveConflictNames(transaction.getRuleConflicts(), ruleNameById);
+
     return new TransactionRow(
         transaction.getId(),
         name,
@@ -125,7 +199,13 @@ public class TransactionViewService {
         date,
         time,
         transaction.getStatus(),
-        amount);
+        amount,
+        categoryId,
+        categoryDisplay == null ? null : categoryDisplay.label(),
+        categoryDisplay != null && categoryDisplay.defaultCategory(),
+        transaction.getCategoryAssignedBy() == null ? null : transaction.getCategoryAssignedBy().name(),
+        transaction.isCategoryLocked(),
+        conflictNames);
   }
 
   private String sanitizeNameForDisplay(String partnerName) {
@@ -203,7 +283,11 @@ public class TransactionViewService {
     if (userDetails == null || userDetails.getUsername() == null || userDetails.getUsername().isBlank()) {
       return Optional.empty();
     }
-    return userRepository.findByEmail(userDetails.getUsername());
+    return userRepository.findByEmail(userDetails.getUsername())
+        .map(user -> {
+          categoryBootstrapService.ensureDefaultUncategorized(user);
+          return user;
+        });
   }
 
   private boolean hasText(String value) {
@@ -222,15 +306,17 @@ public class TransactionViewService {
       BigDecimal minAmount,
       BigDecimal maxAmount,
       String nameContains,
-      String purposeContains) {
+      String purposeContains,
+      boolean onlyUncategorized) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty()) {
-      return new LoadedTransactions(List.of(), Locale.ENGLISH);
+      return new LoadedTransactions(List.of(), Locale.ENGLISH, Map.of(), Map.of());
     }
 
     List<Transaction> transactions =
         transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user.get());
     Locale locale = resolveLocale(user.get());
+    Map<Integer, CategoryDisplay> categoryDisplayById = buildCategoryDisplayById(user.get());
 
     if (minAmount != null) {
       long minCents = Math.abs(toCents(minAmount));
@@ -256,7 +342,108 @@ public class TransactionViewService {
           .filter(tx -> containsIgnoreCase(tx.getPurposeText(), normalized))
           .toList();
     }
-    return new LoadedTransactions(transactions, locale);
+
+    if (onlyUncategorized) {
+      transactions = transactions.stream()
+          .filter(tx -> isDefaultCategory(tx, categoryDisplayById))
+          .toList();
+    }
+
+    Map<Integer, String> ruleNameById = loadRuleNameById(user.get(), transactions);
+    return new LoadedTransactions(transactions, locale, categoryDisplayById, ruleNameById);
+  }
+
+  private boolean isDefaultCategory(Transaction transaction, Map<Integer, CategoryDisplay> categoryDisplayById) {
+    if (transaction.getCategoryAssignedBy() == CategoryAssignedBy.DEFAULT) {
+      return true;
+    }
+    if (transaction.getCategory() == null || transaction.getCategory().getId() == null) {
+      return false;
+    }
+    CategoryDisplay display = categoryDisplayById.get(transaction.getCategory().getId());
+    return display != null && display.defaultCategory();
+  }
+
+  private Map<Integer, CategoryDisplay> buildCategoryDisplayById(User user) {
+    List<Category> parents = categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(user);
+    if (parents.isEmpty()) {
+      return Map.of();
+    }
+
+    Map<Integer, CategoryDisplay> displayById = new HashMap<>();
+    for (Category parent : parents) {
+      List<Category> children = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user, parent);
+      for (Category child : children) {
+        if (child.getId() == null) {
+          continue;
+        }
+        String label = parent.getName() + " -> " + child.getName();
+        displayById.put(child.getId(), new CategoryDisplay(label, child.isDefault()));
+      }
+    }
+    return displayById;
+  }
+
+  private Map<Integer, String> loadRuleNameById(User user, List<Transaction> transactions) {
+    Set<Integer> ruleIds = new HashSet<>();
+    for (Transaction transaction : transactions) {
+      ruleIds.addAll(parseConflictIds(transaction.getRuleConflicts()));
+    }
+    if (ruleIds.isEmpty()) {
+      return Map.of();
+    }
+
+    List<Rule> rules = ruleRepository.findByUserAndIdInAndDeletedAtIsNull(user, List.copyOf(ruleIds));
+    Map<Integer, String> names = new HashMap<>();
+    for (Rule rule : rules) {
+      if (rule.getId() != null) {
+        names.put(rule.getId(), rule.getName());
+      }
+    }
+    return names;
+  }
+
+  private String resolveConflictNames(String ruleConflicts, Map<Integer, String> ruleNameById) {
+    List<Integer> ids = parseConflictIds(ruleConflicts);
+    if (ids.isEmpty()) {
+      return null;
+    }
+
+    List<String> names = ids.stream()
+        .map(id -> ruleNameById.getOrDefault(id, "#" + id))
+        .toList();
+    return String.join(", ", names);
+  }
+
+  private List<Integer> parseConflictIds(String raw) {
+    if (!hasText(raw)) {
+      return List.of();
+    }
+
+    String cleaned = raw.trim();
+    if (cleaned.startsWith("[")) {
+      cleaned = cleaned.substring(1);
+    }
+    if (cleaned.endsWith("]")) {
+      cleaned = cleaned.substring(0, cleaned.length() - 1);
+    }
+    if (cleaned.isBlank()) {
+      return List.of();
+    }
+
+    List<Integer> ids = new java.util.ArrayList<>();
+    for (String token : cleaned.split(",")) {
+      String trimmed = token.trim();
+      if (trimmed.isBlank()) {
+        continue;
+      }
+      try {
+        ids.add(Integer.parseInt(trimmed));
+      } catch (NumberFormatException ignored) {
+        // keep robust against malformed legacy values
+      }
+    }
+    return ids;
   }
 
   private int normalizePage(Integer page, int totalPages) {
@@ -273,5 +460,11 @@ public class TransactionViewService {
     return Math.min(pageSize, MAX_PAGE_SIZE);
   }
 
-  private record LoadedTransactions(List<Transaction> transactions, Locale locale) {}
+  private record LoadedTransactions(
+      List<Transaction> transactions,
+      Locale locale,
+      Map<Integer, CategoryDisplay> categoryDisplayById,
+      Map<Integer, String> ruleNameById) {}
+
+  private record CategoryDisplay(String label, boolean defaultCategory) {}
 }

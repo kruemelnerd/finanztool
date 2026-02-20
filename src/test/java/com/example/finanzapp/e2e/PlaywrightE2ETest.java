@@ -349,9 +349,12 @@ class PlaywrightE2ETest {
 
     page.fill("form.filters input[name='minAmount']", "50");
     page.fill("form.filters input[name='maxAmount']", "100");
-    page.click("form.filters button[type='submit']");
+    page.waitForResponse(
+        response -> response.url().contains("/partials/transactions-table"),
+        () -> page.click("form.filters button[type='submit']"));
+    page.waitForFunction(
+        "() => !document.querySelector('#transactions-table')?.innerText.includes('UEBERWEISUNG')");
 
-    page.locator("#transactions-table").getByText("KARTE").waitFor();
     assertThat(page.locator("#transactions-table").getByText("KARTE").isVisible())
         .isTrue();
     assertThat(page.locator("#transactions-table").getByText("-75.00 EUR").isVisible())
@@ -500,6 +503,8 @@ class PlaywrightE2ETest {
     page.click("form.filters button[type='submit']");
 
     page.locator("#transactions-table").getByText("Space Marine 2").waitFor();
+    page.waitForFunction(
+        "() => !document.querySelector('#transactions-table')?.innerText.includes('Grocery Store')");
     assertThat(page.locator("#transactions-table").getByText("Space Marine 2").isVisible())
         .isTrue();
     assertThat(page.locator("#transactions-table").getByText("Grocery Store").isVisible()).isFalse();

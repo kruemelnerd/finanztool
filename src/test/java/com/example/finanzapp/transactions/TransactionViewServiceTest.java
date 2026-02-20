@@ -2,11 +2,17 @@ package com.example.finanzapp.transactions;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.example.finanzapp.balance.AccountBalanceService;
+import com.example.finanzapp.categories.CategoryBootstrapService;
+import com.example.finanzapp.domain.Category;
+import com.example.finanzapp.domain.CategoryAssignedBy;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
+import com.example.finanzapp.repository.CategoryRepository;
+import com.example.finanzapp.repository.RuleRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import java.math.BigDecimal;
@@ -31,11 +37,29 @@ class TransactionViewServiceTest {
   @Mock
   private AccountBalanceService accountBalanceService;
 
+  @Mock
+  private CategoryBootstrapService categoryBootstrapService;
+
+  @Mock
+  private CategoryRepository categoryRepository;
+
+  @Mock
+  private RuleRepository ruleRepository;
+
   private TransactionViewService service;
 
   @BeforeEach
   void setUp() {
-    service = new TransactionViewService(transactionRepository, userRepository, accountBalanceService);
+    service = new TransactionViewService(
+        transactionRepository,
+        userRepository,
+        accountBalanceService,
+        categoryBootstrapService,
+        categoryRepository,
+        ruleRepository);
+
+    lenient().when(categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(List.of());
   }
 
   @Test
@@ -93,8 +117,8 @@ class TransactionViewServiceTest {
     when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(eq(user)))
         .thenReturn(transactions);
 
-    TransactionPage firstPage = service.loadTransactionsPage(principal, null, null, null, null, 0, 10);
-    TransactionPage secondPage = service.loadTransactionsPage(principal, null, null, null, null, 1, 10);
+    TransactionPage firstPage = service.loadTransactionsPage(principal, null, null, null, null, false, 0, 10);
+    TransactionPage secondPage = service.loadTransactionsPage(principal, null, null, null, null, false, 1, 10);
 
     assertThat(firstPage.totalPages()).isEqualTo(2);
     assertThat(firstPage.totalItems()).isEqualTo(12);
@@ -105,6 +129,34 @@ class TransactionViewServiceTest {
     assertThat(secondPage.rows()).hasSize(2);
     assertThat(secondPage.rows().get(0).name()).isEqualTo("TX-2");
     assertThat(secondPage.rows().get(1).name()).isEqualTo("TX-1");
+  }
+
+  @Test
+  void loadTransactionsPageCanFilterOnlyDefaultAssignedRows() {
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    UserDetails principal = org.springframework.security.core.userdetails.User
+        .withUsername("user@example.com")
+        .password("hashed")
+        .roles("USER")
+        .build();
+
+    Transaction defaultTx = buildTransaction(user, LocalDateTime.of(2026, 2, 2, 9, 0), -100L, "DEFAULT");
+    defaultTx.setCategoryAssignedBy(CategoryAssignedBy.DEFAULT);
+
+    Transaction manualTx = buildTransaction(user, LocalDateTime.of(2026, 2, 1, 9, 0), -100L, "MANUAL");
+    manualTx.setCategoryAssignedBy(CategoryAssignedBy.MANUAL);
+
+    when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(eq(user)))
+        .thenReturn(List.of(defaultTx, manualTx));
+
+    TransactionPage page = service.loadTransactionsPage(principal, null, null, null, null, true, 0, 10);
+
+    assertThat(page.rows()).hasSize(1);
+    assertThat(page.rows().get(0).name()).isEqualTo("DEFAULT");
   }
 
   @Test
@@ -236,6 +288,39 @@ class TransactionViewServiceTest {
     boolean deleted = service.softDeleteTransaction(principal, 42);
 
     assertThat(deleted).isTrue();
+  }
+
+  @Test
+  void setManualCategoryStoresManualAssignmentAndLock() {
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    UserDetails principal = org.springframework.security.core.userdetails.User
+        .withUsername("user@example.com")
+        .password("hashed")
+        .roles("USER")
+        .build();
+
+    Transaction tx = buildTransaction(user, LocalDateTime.of(2026, 2, 2, 9, 0), -100L, "TX");
+
+    Category parent = new Category();
+    parent.setName("Shopping");
+    Category sub = new Category();
+    sub.setName("Sport");
+    sub.setParent(parent);
+
+    when(userRepository.findByEmail("user@example.com")).thenReturn(Optional.of(user));
+    when(transactionRepository.findByIdAndUserAndDeletedAtIsNull(9, user)).thenReturn(Optional.of(tx));
+    when(categoryRepository.findByIdAndUserAndDeletedAtIsNull(22, user)).thenReturn(Optional.of(sub));
+
+    boolean updated = service.setManualCategory(principal, 9, 22);
+
+    assertThat(updated).isTrue();
+    assertThat(tx.getCategory()).isEqualTo(sub);
+    assertThat(tx.getCategoryAssignedBy()).isEqualTo(CategoryAssignedBy.MANUAL);
+    assertThat(tx.isCategoryLocked()).isTrue();
+    assertThat(tx.getRuleConflicts()).isNull();
   }
 
   @Test

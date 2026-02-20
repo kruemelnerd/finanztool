@@ -16,8 +16,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.finanzapp.importcsv.CsvImportException;
 import com.example.finanzapp.importcsv.CsvUploadService;
+import com.example.finanzapp.domain.Category;
+import com.example.finanzapp.domain.CategoryAssignedBy;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
+import com.example.finanzapp.repository.CategoryRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import com.example.finanzapp.settings.DataDeletionService;
@@ -54,6 +57,9 @@ class PagesControllerTest {
 
   @Autowired
   private PasswordEncoder passwordEncoder;
+
+  @Autowired
+  private CategoryRepository categoryRepository;
 
   @MockBean
   private CsvUploadService csvUploadService;
@@ -175,6 +181,45 @@ class PagesControllerTest {
 
     Transaction deleted = transactionRepository.findById(tx.getId()).orElseThrow();
     org.assertj.core.api.Assertions.assertThat(deleted.getDeletedAt()).isNotNull();
+  }
+
+  @Test
+  void setTransactionCategoryStoresManualAssignment() throws Exception {
+    createUser("user@example.com");
+    User owner = userRepository.findByEmail("user@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Transaction tx = new Transaction();
+    tx.setUser(owner);
+    tx.setBookingDateTime(LocalDateTime.of(2026, 2, 6, 12, 0));
+    tx.setPartnerName("Sample");
+    tx.setPurposeText("Sample");
+    tx.setAmountCents(-1000L);
+    tx = transactionRepository.save(tx);
+
+    mockMvc.perform(post("/transactions/" + tx.getId() + "/set-category")
+            .with(user("user@example.com"))
+            .with(csrf())
+            .param("categoryId", sub.getId().toString()))
+        .andExpect(status().is3xxRedirection());
+
+    Transaction updated = transactionRepository.findById(tx.getId()).orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(updated.getCategory()).isNotNull();
+    org.assertj.core.api.Assertions.assertThat(updated.getCategory().getId()).isEqualTo(sub.getId());
+    org.assertj.core.api.Assertions.assertThat(updated.getCategoryAssignedBy()).isEqualTo(CategoryAssignedBy.MANUAL);
+    org.assertj.core.api.Assertions.assertThat(updated.isCategoryLocked()).isTrue();
   }
 
   @Test

@@ -28,6 +28,10 @@
         <span th:text="#{transactions.maxAmount}">Max amount</span>
         <input type="number" step="0.01" name="maxAmount" th:placeholder="#{transactions.maxAmountPlaceholder}" th:value="${maxAmount}" />
       </label>
+      <label class="checkbox-row">
+        <input type="checkbox" name="onlyUncategorized" value="true" th:checked="${onlyUncategorized}" />
+        <span th:text="#{transactions.onlyUncategorized}">Only uncategorized</span>
+      </label>
       <div class="filter-actions">
         <button type="submit" th:text="#{transactions.apply}">Apply</button>
         <a class="button-link" th:href="@{/transactions}" th:text="#{transactions.reset}">Reset filters</a>

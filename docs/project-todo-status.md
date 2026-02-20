@@ -40,6 +40,27 @@ Zuletzt aktualisiert: 2026-02-20
 - [x] Gezielte Testfaelle fuer ReferenceText-Deduplizierung erweitern
 - [x] Chart-Farbe dynamisch: bei Minus rot, bei Plus gruen
 
+## Aktuelle TODOs (Kategorien, Regeln, Sankey)
+
+- [x] Datenmodell finalisieren: `categories`, `rules`, `transactions`-Erweiterung (`category_id`, `category_assigned_by`, `category_locked`, `rule_conflicts` als JSON-Text)
+- [x] Flyway-Migrationen anlegen inkl. Indizes/Constraints (Sub-Namen pro Parent eindeutig)
+- [x] Kategorie-Bootstrap umsetzen (keine Bestandsmigration; Defaults beim Feature-Einstieg pro User anlegen)
+- [x] Text-Normalisierung fuer Regel-Matching bauen (trim, spaces, case-insensitive, Unicode/Apostroph/Diakritik)
+- [x] RuleEngine bauen (Reihenfolge: first match wins, Konflikte als Rule-IDs)
+- [x] Backfill und Single-Rule-Run bauen (RULE ueberschreibbar, MANUAL nie ueberschreiben)
+- [~] Transaktionen erweitert: Kategorie-Spalte, Warn-Icon, Filter nur Default, manuelle Kategorie + Lock (UI/Controller/Tests umgesetzt; Finetuning laeuft)
+- [ ] Regeln-Seite `/rules` bauen (Liste, Create/Edit, Toggle, Move up/down, Run one, Run all)
+- [ ] Sankey-API und Seite bauen (`/api/reports/sankey`, `/reports/sankey`) mit Jahr-Dropdown
+- [ ] i18n fuer alle neuen Texte/Fehler/Warnungen DE/EN erweitern
+- [x] Tests erweitern (Unit, Integration, Cucumber/UI) und danach `mvn test`
+
+### Statusupdate (Start Umsetzung)
+
+- Erste 3 Punkte umgesetzt (Schema, Migrationen, Bootstrap ohne Bestandsmigration)
+- Danach umgesetzt: Normalizer + RuleEngine + AssignmentService (inkl. Import-Integration)
+- Transaktions-Tabelle auf HTMX-Filterfluss angepasst; Playwright-Test auf asynchrones Reload-Waiting gehaertet
+- Teststatus aktuell: `mvn test` erfolgreich (155 Tests, 0 Failures)
+
 ## Umsetzungsplan (durchgefuehrt)
 
 1. Konsistenz korrigieren: SDD-CSV-Delimiter auf Semikolon, Root-Struktur als Source of Truth.

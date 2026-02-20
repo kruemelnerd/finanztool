@@ -1,5 +1,6 @@
 package com.example.finanzapp.auth;
 
+import com.example.finanzapp.categories.CategoryBootstrapService;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,10 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class RegistrationService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
+  private final CategoryBootstrapService categoryBootstrapService;
 
-  public RegistrationService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+  public RegistrationService(
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      CategoryBootstrapService categoryBootstrapService) {
     this.userRepository = userRepository;
     this.passwordEncoder = passwordEncoder;
+    this.categoryBootstrapService = categoryBootstrapService;
   }
 
   @Transactional
@@ -27,7 +33,9 @@ public class RegistrationService {
     user.setPasswordHash(passwordEncoder.encode(form.getPassword()));
     user.setDisplayName(resolveDisplayName(form));
     user.setLanguage("DE");
-    return userRepository.save(user);
+    User savedUser = userRepository.save(user);
+    categoryBootstrapService.ensureDefaultUncategorized(savedUser);
+    return savedUser;
   }
 
   private String resolveDisplayName(RegistrationForm form) {

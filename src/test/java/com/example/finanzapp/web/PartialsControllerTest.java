@@ -57,7 +57,8 @@ class PartialsControllerTest {
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("Name")))
         .andExpect(content().string(containsString("Date")))
-        .andExpect(content().string(containsString("Amount")));
+        .andExpect(content().string(containsString("Amount")))
+        .andExpect(content().string(containsString("Category")));
   }
 
   @Test
