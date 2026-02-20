@@ -122,7 +122,7 @@ class PagesControllerTest {
   void rulesPageLoadsForAuthenticatedUser() throws Exception {
     mockMvc.perform(get("/rules").with(user("user")))
         .andExpect(status().isOk())
-        .andExpect(content().string(containsString("Search text")));
+        .andExpect(content().string(containsString("Text fragments")));
   }
 
   @Test
@@ -178,7 +178,7 @@ class PagesControllerTest {
   }
 
   @Test
-  void createRulePersistsRule() throws Exception {
+  void createRulePersistsRuleGroupWithMultipleFragments() throws Exception {
     createUser("rules-create@example.com");
     User owner = userRepository.findByEmail("rules-create@example.com").orElseThrow();
 
@@ -194,62 +194,78 @@ class PagesControllerTest {
     sub.setName("Sport");
     sub.setSortOrder(0);
     sub = categoryRepository.save(sub);
+    Integer subId = sub.getId();
 
     mockMvc.perform(post("/rules")
             .with(user("rules-create@example.com"))
             .with(csrf())
-            .param("name", "InterSport")
-            .param("matchText", "intersport")
-            .param("matchField", "BOTH")
-            .param("categoryId", sub.getId().toString()))
+            .param("fragmentsText", "intersport\nsportcheck")
+            .param("categoryId", subId.toString()))
         .andExpect(status().is3xxRedirection())
         .andExpect(redirectedUrl("/rules"))
         .andExpect(flash().attribute("rulesStatus", "success"));
 
     java.util.List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner);
-    org.assertj.core.api.Assertions.assertThat(rules).hasSize(1);
-    org.assertj.core.api.Assertions.assertThat(rules.get(0).getName()).isEqualTo("InterSport");
-    org.assertj.core.api.Assertions.assertThat(rules.get(0).getMatchField()).isEqualTo(RuleMatchField.BOTH);
-    org.assertj.core.api.Assertions.assertThat(rules.get(0).getCategory().getId()).isEqualTo(sub.getId());
+    org.assertj.core.api.Assertions.assertThat(rules).hasSize(2);
+    org.assertj.core.api.Assertions.assertThat(rules)
+        .extracting(Rule::getMatchText)
+        .containsExactly("intersport", "sportcheck");
+    org.assertj.core.api.Assertions.assertThat(rules)
+        .allMatch(rule -> rule.getMatchField() == RuleMatchField.BOTH);
+    org.assertj.core.api.Assertions.assertThat(rules)
+        .allMatch(rule -> subId.equals(rule.getCategory().getId()));
   }
 
   @Test
-  void moveRuleUpSwapsOrder() throws Exception {
+  void moveRuleUpSwapsCategoryOrder() throws Exception {
     createUser("rules-order@example.com");
     User owner = userRepository.findByEmail("rules-order@example.com").orElseThrow();
 
-    Category parent = new Category();
-    parent.setUser(owner);
-    parent.setName("Shopping");
-    parent.setSortOrder(0);
-    parent = categoryRepository.save(parent);
+    Category firstParent = new Category();
+    firstParent.setUser(owner);
+    firstParent.setName("Shopping");
+    firstParent.setSortOrder(0);
+    firstParent = categoryRepository.save(firstParent);
 
-    Category sub = new Category();
-    sub.setUser(owner);
-    sub.setParent(parent);
-    sub.setName("Sport");
-    sub.setSortOrder(0);
-    sub = categoryRepository.save(sub);
+    Category firstSub = new Category();
+    firstSub.setUser(owner);
+    firstSub.setParent(firstParent);
+    firstSub.setName("Sport");
+    firstSub.setSortOrder(0);
+    firstSub = categoryRepository.save(firstSub);
+
+    Category secondParent = new Category();
+    secondParent.setUser(owner);
+    secondParent.setName("Food");
+    secondParent.setSortOrder(1);
+    secondParent = categoryRepository.save(secondParent);
+
+    Category secondSub = new Category();
+    secondSub.setUser(owner);
+    secondSub.setParent(secondParent);
+    secondSub.setName("FastFood");
+    secondSub.setSortOrder(0);
+    secondSub = categoryRepository.save(secondSub);
 
     Rule first = new Rule();
     first.setUser(owner);
     first.setName("Rule One");
     first.setMatchText("one");
     first.setMatchField(RuleMatchField.BOTH);
-    first.setCategory(sub);
+    first.setCategory(firstSub);
     first.setSortOrder(0);
-    first = ruleRepository.save(first);
+    ruleRepository.save(first);
 
     Rule second = new Rule();
     second.setUser(owner);
     second.setName("Rule Two");
     second.setMatchText("two");
     second.setMatchField(RuleMatchField.BOTH);
-    second.setCategory(sub);
+    second.setCategory(secondSub);
     second.setSortOrder(1);
-    second = ruleRepository.save(second);
+    ruleRepository.save(second);
 
-    mockMvc.perform(post("/rules/" + second.getId() + "/move-up")
+    mockMvc.perform(post("/rules/" + secondSub.getId() + "/move-up")
             .with(user("rules-order@example.com"))
             .with(csrf()))
         .andExpect(status().is3xxRedirection())
@@ -258,12 +274,12 @@ class PagesControllerTest {
 
     java.util.List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner);
     org.assertj.core.api.Assertions.assertThat(rules).hasSize(2);
-    org.assertj.core.api.Assertions.assertThat(rules.get(0).getId()).isEqualTo(second.getId());
-    org.assertj.core.api.Assertions.assertThat(rules.get(1).getId()).isEqualTo(first.getId());
+    org.assertj.core.api.Assertions.assertThat(rules.get(0).getCategory().getId()).isEqualTo(secondSub.getId());
+    org.assertj.core.api.Assertions.assertThat(rules.get(1).getCategory().getId()).isEqualTo(firstSub.getId());
   }
 
   @Test
-  void runSingleRuleUpdatesMatchingTransactionAndRuleMetadata() throws Exception {
+  void runSingleCategoryRuleUpdatesMatchingTransactionAndRuleMetadata() throws Exception {
     createUser("rules-run@example.com");
     User owner = userRepository.findByEmail("rules-run@example.com").orElseThrow();
 
@@ -297,7 +313,7 @@ class PagesControllerTest {
     transaction.setAmountCents(-4900L);
     transaction = transactionRepository.save(transaction);
 
-    mockMvc.perform(post("/rules/" + rule.getId() + "/run")
+    mockMvc.perform(post("/rules/" + sub.getId() + "/run")
             .with(user("rules-run@example.com"))
             .with(csrf()))
         .andExpect(status().is3xxRedirection())

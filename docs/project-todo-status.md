@@ -11,7 +11,7 @@ Zuletzt aktualisiert: 2026-02-20
 5. [x] Delete-Confirmations fuer riskante Aktionen
 6. [x] Delete-Flows Ende-zu-Ende absichern
 7. [x] i18n-Haertung: alle Controller-Messages externalisieren
-8. [~] de-DE/EN-Formatierung strikt vereinheitlichen
+8. [x] de-DE/EN-Formatierung strikt vereinheitlichen
 9. [x] Dashboard-Chart-Szenarien vollstaendig spezifizieren
 10. [x] Robustheit/UX: nutzerfreundliche Fehler + Retry
 
@@ -28,6 +28,8 @@ Zuletzt aktualisiert: 2026-02-20
 - Delete-Flows jetzt als UI-Cucumber inkl. Confirm/Cancel abgedeckt
 - Controller-Hardcodings auf i18n-Keys umgestellt (Flash-Messages)
 - Partials-Error-State mit Retry fuer Chart/Recent/Transactions-Table umgesetzt
+- Regeln-Feature auf kategoriezentrierte Verwaltung umgebaut (2-Schritt-Flow, mehrere Fragmente je Kategorie, Aktionen auf Kategorie-Ebene)
+- Konfliktlogik im RuleEngine-Same-Category-Fall gehaertet (mehrere Fragmente derselben Kategorie erzeugen keinen Konflikt)
 
 ## Aktuelle TODOs (naechste Schritte)
 
@@ -48,7 +50,7 @@ Zuletzt aktualisiert: 2026-02-20
 - [x] Text-Normalisierung fuer Regel-Matching bauen (trim, spaces, case-insensitive, Unicode/Apostroph/Diakritik)
 - [x] RuleEngine bauen (Reihenfolge: first match wins, Konflikte als Rule-IDs)
 - [x] Backfill und Single-Rule-Run bauen (RULE ueberschreibbar, MANUAL nie ueberschreiben)
-- [~] Transaktionen erweitert: Kategorie-Spalte, Warn-Icon, Filter nur Default, manuelle Kategorie + Lock (UI/Controller/Tests umgesetzt; Finetuning laeuft)
+- [x] Transaktionen erweitert: Kategorie-Spalte, Warn-Icon, Filter nur Default, manuelle Kategorie + Lock (inkl. Finetuning der Status-/Lock-Anzeige)
 - [x] Regeln-Seite `/rules` gebaut (Liste, Create/Edit, Toggle, Move up/down, Run one, Run all + Delete)
 - [x] Sankey-API und Seite gebaut (`/api/reports/sankey`, `/reports/sankey`) mit Jahr-Dropdown
 - [x] i18n fuer alle neuen Texte/Fehler/Warnungen DE/EN erweitert
@@ -60,8 +62,11 @@ Zuletzt aktualisiert: 2026-02-20
 - Danach umgesetzt: Normalizer + RuleEngine + AssignmentService (inkl. Import-Integration)
 - Transaktions-Tabelle auf HTMX-Filterfluss angepasst; Playwright-Test auf asynchrones Reload-Waiting gehaertet
 - Regeln-Seite umgesetzt inkl. Form-Flows, Reihenfolge, Aktiv-Toggle und Run-Buttons
+- Regeln-Seite danach auf Kategoriegruppen refaktoriert (Create in 2 Schritten, Sammelbearbeitung pro Kategorie, Run/Toggle/Delete/Move pro Kategorie)
 - Sankey-Report umgesetzt (Seite + API + Jahr-Dropdown + Basisdiagramm)
-- Teststatus aktuell: `mvn test` erfolgreich (161 Tests, 0 Failures)
+- Finetuning umgesetzt: Kategorie-Herkunft + Lock-Status in der Transaktions-Tabelle sichtbar
+- de-DE/EN-Formatierung vereinheitlicht (u. a. Duplicate-Modal + Last-Import-Zeitstempel lokalisiert)
+- Teststatus aktuell: `mvn test` erfolgreich (166 Tests, 0 Failures)
 
 ## Umsetzungsplan (durchgefuehrt)
 
@@ -75,3 +80,5 @@ Zuletzt aktualisiert: 2026-02-20
 
 Diese Datei ist die zentrale Uebergabe fuer den naechsten Arbeitsstand.
 Pfad: `docs/project-todo-status.md`
+
+- TODO naechste Session: kurzer UI-Smoketest fuer `/rules` (2-Schritt-Create, Aktionen Move/Toggle/Run/Delete pro Kategorie).

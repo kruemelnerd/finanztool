@@ -41,8 +41,24 @@
               th:text="${transaction.categoryLabel} ?: #{transactions.category.none}">Sonstiges -> Unkategorisiert</span>
             <span
               class="category-warning"
-              th:if="${transaction.conflictNames}"
-              th:title="#{transactions.category.conflicts(${transaction.conflictNames})}">!</span>
+                th:if="${transaction.conflictNames}"
+                th:title="#{transactions.category.conflicts(${transaction.conflictNames})}">!</span>
+          </div>
+          <div class="category-meta">
+            <span
+              class="category-origin"
+              th:classappend="${transaction.assignedBy} == 'DEFAULT' ? ' category-origin-default' : (${transaction.assignedBy} == 'MANUAL' ? ' category-origin-manual' : (${transaction.assignedBy} == 'RULE' ? ' category-origin-rule' : ' category-origin-unknown'))"
+              th:switch="${transaction.assignedBy}">
+              <span th:case="'DEFAULT'" th:text="#{transactions.assignedBy.default}">Default</span>
+              <span th:case="'MANUAL'" th:text="#{transactions.assignedBy.manual}">Manual</span>
+              <span th:case="'RULE'" th:text="#{transactions.assignedBy.rule}">Rule</span>
+              <span th:case="*" th:text="#{transactions.assignedBy.unknown}">Unknown</span>
+            </span>
+            <span
+              class="category-lock"
+              th:if="${transaction.categoryLocked}"
+              th:title="#{transactions.category.lockedHint}"
+              th:text="#{transactions.category.locked}">Locked</span>
           </div>
 
           <form

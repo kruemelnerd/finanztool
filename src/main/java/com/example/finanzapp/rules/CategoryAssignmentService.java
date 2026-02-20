@@ -11,6 +11,8 @@ import com.example.finanzapp.repository.TransactionRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,9 +52,15 @@ public class CategoryAssignmentService {
     Category defaultCategory = categoryBootstrapService.ensureDefaultUncategorized(user);
     List<Rule> activeRules = ruleRepository.findByUserAndIsActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user);
     List<Transaction> transactions = transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeAsc(user);
+    Map<Integer, Integer> matchCountByRuleId = new HashMap<>();
 
     int updated = 0;
     for (Transaction transaction : transactions) {
+      RuleEngine.RuleEvaluation evaluation = ruleEngine.evaluate(transaction, activeRules);
+      if (evaluation.winningRule() != null && evaluation.winningRule().getId() != null) {
+        Integer ruleId = evaluation.winningRule().getId();
+        matchCountByRuleId.put(ruleId, matchCountByRuleId.getOrDefault(ruleId, 0) + 1);
+      }
       if (applyRules(transaction, activeRules, defaultCategory)) {
         updated++;
       }
@@ -61,6 +69,61 @@ public class CategoryAssignmentService {
     if (updated > 0) {
       transactionRepository.saveAll(transactions);
     }
+
+    Instant now = Instant.now();
+    for (Rule rule : activeRules) {
+      rule.setLastRunAt(now);
+      Integer ruleId = rule.getId();
+      rule.setLastMatchCount(ruleId == null ? 0 : matchCountByRuleId.getOrDefault(ruleId, 0));
+    }
+    ruleRepository.saveAll(activeRules);
+
+    return new RuleRunStats(updated, transactions.size());
+  }
+
+  @Transactional
+  public RuleRunStats runCategoryRules(User user, Integer categoryId) {
+    List<Rule> categoryRules =
+        ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user, categoryId);
+    if (categoryRules.isEmpty()) {
+      throw new IllegalArgumentException("Rule category not found");
+    }
+
+    List<Rule> activeRules = categoryRules.stream()
+        .filter(Rule::isActive)
+        .toList();
+
+    List<Transaction> transactions = transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeAsc(user);
+    int updated = 0;
+    int matches = 0;
+
+    for (Transaction transaction : transactions) {
+      if (transaction.isCategoryLocked()) {
+        continue;
+      }
+
+      RuleEngine.RuleEvaluation evaluation = ruleEngine.evaluate(transaction, activeRules);
+      if (evaluation.winningRule() == null) {
+        continue;
+      }
+
+      matches++;
+      if (applyWinningRule(transaction, evaluation.winningRule(), null)) {
+        updated++;
+      }
+    }
+
+    if (updated > 0) {
+      transactionRepository.saveAll(transactions);
+    }
+
+    Instant now = Instant.now();
+    for (Rule rule : categoryRules) {
+      rule.setLastRunAt(now);
+      rule.setLastMatchCount(matches);
+    }
+    ruleRepository.saveAll(categoryRules);
+
     return new RuleRunStats(updated, transactions.size());
   }
 

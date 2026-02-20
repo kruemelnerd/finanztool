@@ -94,6 +94,31 @@ class CategoryAssignmentServiceTest {
   }
 
   @Test
+  void assignForImportDoesNotStoreConflictWhenFurtherMatchesUseSameCategory() throws Exception {
+    User user = new User();
+    Category defaultCategory = new Category();
+    Category fastFood = new Category();
+
+    Rule first = ruleWith(100, "FastFood 1", "mcdonalds", RuleMatchField.PARTNER_NAME, fastFood);
+    Rule second = ruleWith(200, "FastFood 2", "donald", RuleMatchField.BOTH, fastFood);
+
+    Transaction transaction = new Transaction();
+    transaction.setUser(user);
+    transaction.setPartnerName("McDonald’s Berlin");
+    transaction.setPurposeText("Lunch");
+
+    when(categoryBootstrapService.ensureDefaultUncategorized(user)).thenReturn(defaultCategory);
+    when(ruleRepository.findByUserAndIsActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user))
+        .thenReturn(List.of(first, second));
+
+    service.assignForImport(user, List.of(transaction));
+
+    assertThat(transaction.getCategory()).isEqualTo(fastFood);
+    assertThat(transaction.getCategoryAssignedBy()).isEqualTo(CategoryAssignedBy.RULE);
+    assertThat(transaction.getRuleConflicts()).isNull();
+  }
+
+  @Test
   void assignForImportDoesNotOverrideManualLockedTransaction() {
     User user = new User();
     Category manualCategory = new Category();

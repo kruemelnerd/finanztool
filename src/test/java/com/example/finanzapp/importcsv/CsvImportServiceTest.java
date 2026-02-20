@@ -80,6 +80,7 @@ class CsvImportServiceTest {
     User user = new User();
     user.setEmail("user@example.com");
     user.setPasswordHash("hashed");
+    user.setLanguage("EN");
 
     List<BalancePoint> points = List.of(new BalancePoint(LocalDate.now(), 1000L));
     when(balanceService.computeLast30Days(eq(1000L), anyList())).thenReturn(points);
@@ -182,6 +183,7 @@ class CsvImportServiceTest {
     User user = new User();
     user.setEmail("user@example.com");
     user.setPasswordHash("hashed");
+    user.setLanguage("EN");
 
     Transaction first = new Transaction();
     first.setUser(user);
@@ -221,6 +223,38 @@ class CsvImportServiceTest {
             "2026-02-01 - LASTSCHRIFT - -31.00 EUR",
             "2026-02-02 - UEBERWEISUNG - -120.00 EUR",
             "2026-02-03 - KARTE - -75.00 EUR");
+  }
+
+  @Test
+  void importReturnsGermanFormattedDuplicateSamplesWhenUserLanguageIsDe() {
+    String csv = String.join("\n",
+        "Alter Kontostand;10,00 EUR",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "01.02.2026;01.02.2026;LASTSCHRIFT;Buchungstext: Abo;-31,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+    user.setLanguage("DE");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2026, 2, 1, 0, 0));
+    existing.setTransactionType("LASTSCHRIFT");
+    existing.setPartnerName("LASTSCHRIFT");
+    existing.setPurposeText("Abo");
+    existing.setAmountCents(-3100L);
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+    when(balanceService.computeLast30Days(eq(1000L), anyList())).thenReturn(List.of());
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+    assertThat(result.duplicateSamples()).containsExactly("01.02.2026 - LASTSCHRIFT - -31,00 EUR");
   }
 
   @Test

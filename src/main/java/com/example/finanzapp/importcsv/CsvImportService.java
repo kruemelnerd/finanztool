@@ -8,6 +8,9 @@ import com.example.finanzapp.domain.User;
 import com.example.finanzapp.rules.CategoryAssignmentService;
 import com.example.finanzapp.repository.CsvArtifactRepository;
 import com.example.finanzapp.repository.TransactionRepository;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -23,6 +26,8 @@ public class CsvImportService {
   public static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
   private static final Pattern REFERENCE_PATTERN =
       Pattern.compile("(?i)\\bref\\b\\.?\\s*[:#-]?\\s*([^\\s;,)]+)");
+  private static final DateTimeFormatter DATE_FORMAT_EN = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+  private static final DateTimeFormatter DATE_FORMAT_DE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
   private final CsvArtifactRepository csvArtifactRepository;
   private final TransactionRepository transactionRepository;
@@ -63,6 +68,7 @@ public class CsvImportService {
     csvArtifactRepository.save(artifact);
 
     CsvParsingResult parsed = csvParser.parse(bytes);
+    Locale locale = resolveLocale(user);
 
     List<Transaction> parsedTransactions = parsed.transactions();
     List<Transaction> existing =
@@ -80,7 +86,7 @@ public class CsvImportService {
       transaction.setUser(user);
       String key = buildKey(transaction);
       if (existingKeys.contains(key) || !seenInImport.add(key)) {
-        duplicateSamples.add(formatDuplicate(transaction));
+        duplicateSamples.add(formatDuplicate(transaction, locale));
         continue;
       }
       newTransactions.add(transaction);
@@ -156,10 +162,10 @@ public class CsvImportService {
     return normalizeReference(token);
   }
 
-  private String formatDuplicate(Transaction transaction) {
-    String date = transaction.getBookingDateTime().toLocalDate().toString();
-    String amount = formatAmount(transaction.getAmountCents());
-    String name = transaction.getPartnerName();
+  private String formatDuplicate(Transaction transaction, Locale locale) {
+    String date = resolveDateFormatter(locale).format(transaction.getBookingDateTime().toLocalDate());
+    String amount = formatAmount(transaction.getAmountCents(), locale);
+    String name = transaction.getPartnerName() == null ? "" : transaction.getPartnerName();
     return date + " - " + name + " - " + amount;
   }
 
@@ -194,11 +200,24 @@ public class CsvImportService {
     return source.toLowerCase(Locale.ROOT).indexOf(marker.toLowerCase(Locale.ROOT));
   }
 
-  private String formatAmount(long cents) {
-    boolean negative = cents < 0;
-    long abs = Math.abs(cents);
-    long euros = abs / 100;
-    long remainder = abs % 100;
-    return String.format(Locale.US, "%s%d.%02d EUR", negative ? "-" : "", euros, remainder);
+  private String formatAmount(long cents, Locale locale) {
+    DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(locale);
+    DecimalFormat format = new DecimalFormat("#,##0.00", symbols);
+    format.setGroupingUsed(true);
+    return format.format(cents / 100.0d) + " EUR";
+  }
+
+  private DateTimeFormatter resolveDateFormatter(Locale locale) {
+    if (Locale.GERMAN.getLanguage().equals(locale.getLanguage())) {
+      return DATE_FORMAT_DE;
+    }
+    return DATE_FORMAT_EN;
+  }
+
+  private Locale resolveLocale(User user) {
+    if (user != null && "DE".equalsIgnoreCase(user.getLanguage())) {
+      return Locale.GERMANY;
+    }
+    return Locale.ENGLISH;
   }
 }

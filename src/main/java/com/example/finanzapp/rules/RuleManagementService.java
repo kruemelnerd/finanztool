@@ -3,7 +3,6 @@ package com.example.finanzapp.rules;
 import com.example.finanzapp.categories.CategoryBootstrapService;
 import com.example.finanzapp.domain.Category;
 import com.example.finanzapp.domain.Rule;
-import com.example.finanzapp.domain.RuleMatchField;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.CategoryRepository;
 import com.example.finanzapp.repository.RuleRepository;
@@ -11,10 +10,16 @@ import com.example.finanzapp.repository.UserRepository;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -45,19 +50,66 @@ public class RuleManagementService {
   }
 
   @Transactional(readOnly = true)
-  public List<RuleListRow> loadRules(UserDetails userDetails) {
+  public List<RuleCategoryRow> loadRules(UserDetails userDetails) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty()) {
       return List.of();
     }
 
-    List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    List<Rule> orderedRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    if (orderedRules.isEmpty()) {
+      return List.of();
+    }
+
     Locale locale = resolveLocale(user.get());
     DateTimeFormatter formatter = resolveDateTimeFormatter(locale);
+    Map<Integer, List<Rule>> rulesByCategory = groupRulesByCategory(orderedRules);
+    List<Integer> categoryOrder = new ArrayList<>(rulesByCategory.keySet());
 
-    return java.util.stream.IntStream.range(0, rules.size())
-        .mapToObj(index -> toRow(rules.get(index), index, rules.size(), formatter))
-        .toList();
+    List<RuleCategoryRow> rows = new ArrayList<>();
+    for (int index = 0; index < categoryOrder.size(); index++) {
+      Integer categoryId = categoryOrder.get(index);
+      List<Rule> categoryRules = rulesByCategory.get(categoryId);
+      if (categoryRules == null || categoryRules.isEmpty()) {
+        continue;
+      }
+
+      Rule first = categoryRules.get(0);
+      String categoryLabel = resolveCategoryLabel(first.getCategory());
+      List<String> fragments = categoryRules.stream()
+          .map(Rule::getMatchText)
+          .filter(value -> value != null && !value.isBlank())
+          .toList();
+
+      boolean allActive = categoryRules.stream().allMatch(Rule::isActive);
+      Instant lastRunAt = categoryRules.stream()
+          .map(Rule::getLastRunAt)
+          .filter(value -> value != null)
+          .max(Instant::compareTo)
+          .orElse(null);
+
+      String lastRunLabel = "-";
+      if (lastRunAt != null) {
+        lastRunLabel = formatter.format(lastRunAt.atZone(ZoneId.systemDefault()));
+      }
+
+      int matchCount = categoryRules.stream()
+          .mapToInt(Rule::getLastMatchCount)
+          .sum();
+
+      rows.add(new RuleCategoryRow(
+          categoryId,
+          categoryLabel,
+          fragments,
+          fragments.size(),
+          allActive,
+          lastRunLabel,
+          matchCount,
+          index > 0,
+          index < (categoryOrder.size() - 1)));
+    }
+
+    return List.copyOf(rows);
   }
 
   @Transactional(readOnly = true)
@@ -72,7 +124,7 @@ public class RuleManagementService {
       return List.of();
     }
 
-    List<RuleCategoryOption> options = new java.util.ArrayList<>();
+    List<RuleCategoryOption> options = new ArrayList<>();
     for (Category parent : parents) {
       List<Category> children = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), parent);
       for (Category child : children) {
@@ -86,8 +138,8 @@ public class RuleManagementService {
   }
 
   @Transactional(readOnly = true)
-  public Optional<RuleFormData> loadRuleFormData(UserDetails userDetails, Integer ruleId) {
-    if (ruleId == null) {
+  public Optional<RuleGroupFormData> loadRuleGroupFormData(UserDetails userDetails, Integer categoryId) {
+    if (categoryId == null) {
       return Optional.empty();
     }
 
@@ -96,37 +148,52 @@ public class RuleManagementService {
       return Optional.empty();
     }
 
-    return ruleRepository.findByIdAndUserAndDeletedAtIsNull(ruleId, user.get())
-        .map(rule -> new RuleFormData(
-            rule.getName(),
-            rule.getMatchText(),
-            rule.getMatchField() == null ? RuleMatchField.BOTH : rule.getMatchField(),
-            rule.getCategory() == null ? null : rule.getCategory().getId()));
+    List<Rule> rules = ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), categoryId);
+    if (rules.isEmpty()) {
+      return Optional.empty();
+    }
+
+    Rule first = rules.get(0);
+    String categoryLabel = resolveCategoryLabel(first.getCategory());
+    String fragmentsText = rules.stream()
+        .map(Rule::getMatchText)
+        .filter(value -> value != null && !value.isBlank())
+        .collect(java.util.stream.Collectors.joining("\n"));
+
+    return Optional.of(new RuleGroupFormData(categoryId, categoryLabel, fragmentsText));
   }
 
   @Transactional
-  public boolean createRule(UserDetails userDetails, RuleCommand command) {
+  public boolean createRuleGroup(UserDetails userDetails, RuleGroupCommand command) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty()) {
       return false;
     }
 
-    RulePreparedData prepared = prepareRuleData(user.get(), command);
+    RuleGroupPreparedData prepared = prepareRuleGroupData(user.get(), command);
     if (prepared == null) {
       return false;
     }
 
-    Rule rule = new Rule();
-    rule.setUser(user.get());
-    rule.setName(prepared.name());
-    rule.setMatchText(prepared.matchText());
-    rule.setMatchField(prepared.matchField());
-    rule.setCategory(prepared.category());
-    rule.setActive(true);
-    rule.setSortOrder(ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get()).size());
+    List<Rule> orderedRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    int nextSortOrder = orderedRules.isEmpty() ? 0 : orderedRules.get(orderedRules.size() - 1).getSortOrder() + 1;
+
+    List<Rule> newRules = new ArrayList<>();
+    for (String fragment : prepared.fragments()) {
+      Rule rule = new Rule();
+      rule.setUser(user.get());
+      rule.setName(uniqueRuleName(prepared.category()));
+      rule.setMatchText(fragment);
+      rule.setMatchField(com.example.finanzapp.domain.RuleMatchField.BOTH);
+      rule.setCategory(prepared.category());
+      rule.setActive(true);
+      rule.setSortOrder(nextSortOrder++);
+      newRules.add(rule);
+    }
 
     try {
-      ruleRepository.save(rule);
+      ruleRepository.saveAll(newRules);
+      normalizeSortOrder(user.get());
       return true;
     } catch (DataIntegrityViolationException ignored) {
       return false;
@@ -134,8 +201,8 @@ public class RuleManagementService {
   }
 
   @Transactional
-  public boolean updateRule(UserDetails userDetails, Integer ruleId, RuleCommand command) {
-    if (ruleId == null) {
+  public boolean updateRuleGroup(UserDetails userDetails, Integer categoryId, RuleGroupCommand command) {
+    if (categoryId == null) {
       return false;
     }
 
@@ -144,24 +211,43 @@ public class RuleManagementService {
       return false;
     }
 
-    Optional<Rule> existing = ruleRepository.findByIdAndUserAndDeletedAtIsNull(ruleId, user.get());
-    if (existing.isEmpty()) {
+    List<Rule> existingRules = ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), categoryId);
+    if (existingRules.isEmpty()) {
       return false;
     }
 
-    RulePreparedData prepared = prepareRuleData(user.get(), command);
-    if (prepared == null) {
+    RuleGroupPreparedData prepared = prepareRuleGroupData(user.get(), command);
+    if (prepared == null || !categoryId.equals(prepared.category().getId())) {
       return false;
     }
 
-    Rule rule = existing.get();
-    rule.setName(prepared.name());
-    rule.setMatchText(prepared.matchText());
-    rule.setMatchField(prepared.matchField());
-    rule.setCategory(prepared.category());
+    List<Rule> allRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    List<Integer> categoryOrder = buildCategoryOrder(allRules);
+    boolean allActive = existingRules.stream().allMatch(Rule::isActive);
+
+    Instant deletedAt = Instant.now();
+    for (Rule existingRule : existingRules) {
+      existingRule.setDeletedAt(deletedAt);
+    }
+    ruleRepository.saveAll(existingRules);
+
+    int nextSortOrder = allRules.isEmpty() ? 0 : allRules.get(allRules.size() - 1).getSortOrder() + 1;
+    List<Rule> replacementRules = new ArrayList<>();
+    for (String fragment : prepared.fragments()) {
+      Rule rule = new Rule();
+      rule.setUser(user.get());
+      rule.setName(uniqueRuleName(prepared.category()));
+      rule.setMatchText(fragment);
+      rule.setMatchField(com.example.finanzapp.domain.RuleMatchField.BOTH);
+      rule.setCategory(prepared.category());
+      rule.setActive(allActive);
+      rule.setSortOrder(nextSortOrder++);
+      replacementRules.add(rule);
+    }
 
     try {
-      ruleRepository.save(rule);
+      ruleRepository.saveAll(replacementRules);
+      reindexByCategoryOrder(user.get(), categoryOrder);
       return true;
     } catch (DataIntegrityViolationException ignored) {
       return false;
@@ -169,55 +255,65 @@ public class RuleManagementService {
   }
 
   @Transactional
-  public boolean toggleRule(UserDetails userDetails, Integer ruleId) {
-    Optional<Rule> rule = resolveRule(userDetails, ruleId);
-    if (rule.isEmpty()) {
+  public boolean toggleRuleCategory(UserDetails userDetails, Integer categoryId) {
+    Optional<User> user = resolveUser(userDetails);
+    if (user.isEmpty() || categoryId == null) {
       return false;
     }
 
-    rule.get().setActive(!rule.get().isActive());
-    ruleRepository.save(rule.get());
+    List<Rule> rules = ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), categoryId);
+    if (rules.isEmpty()) {
+      return false;
+    }
+
+    boolean enable = !rules.stream().allMatch(Rule::isActive);
+    for (Rule rule : rules) {
+      rule.setActive(enable);
+    }
+    ruleRepository.saveAll(rules);
     return true;
   }
 
   @Transactional
-  public boolean moveRuleUp(UserDetails userDetails, Integer ruleId) {
-    return moveRule(userDetails, ruleId, -1);
+  public boolean moveRuleCategoryUp(UserDetails userDetails, Integer categoryId) {
+    return moveRuleCategory(userDetails, categoryId, -1);
   }
 
   @Transactional
-  public boolean moveRuleDown(UserDetails userDetails, Integer ruleId) {
-    return moveRule(userDetails, ruleId, 1);
+  public boolean moveRuleCategoryDown(UserDetails userDetails, Integer categoryId) {
+    return moveRuleCategory(userDetails, categoryId, 1);
   }
 
   @Transactional
-  public boolean softDeleteRule(UserDetails userDetails, Integer ruleId) {
-    Optional<Rule> rule = resolveRule(userDetails, ruleId);
-    if (rule.isEmpty()) {
+  public boolean softDeleteRuleCategory(UserDetails userDetails, Integer categoryId) {
+    Optional<User> user = resolveUser(userDetails);
+    if (user.isEmpty() || categoryId == null) {
       return false;
     }
 
-    Rule toDelete = rule.get();
-    toDelete.setDeletedAt(Instant.now());
-    ruleRepository.save(toDelete);
-
-    Optional<User> user = resolveUser(userDetails);
-    if (user.isEmpty()) {
-      return true;
+    List<Rule> rules = ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), categoryId);
+    if (rules.isEmpty()) {
+      return false;
     }
-    reindexRules(ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get()));
+
+    Instant now = Instant.now();
+    for (Rule rule : rules) {
+      rule.setDeletedAt(now);
+    }
+    ruleRepository.saveAll(rules);
+    normalizeSortOrder(user.get());
     return true;
   }
 
   @Transactional
-  public Optional<CategoryAssignmentService.RuleRunStats> runSingleRule(UserDetails userDetails, Integer ruleId) {
+  public Optional<CategoryAssignmentService.RuleRunStats> runCategoryRules(UserDetails userDetails, Integer categoryId) {
     Optional<User> user = resolveUser(userDetails);
-    if (user.isEmpty() || ruleId == null) {
+    if (user.isEmpty() || categoryId == null) {
       return Optional.empty();
     }
 
     try {
-      return Optional.of(categoryAssignmentService.runSingleRule(user.get(), ruleId));
+      return Optional.of(categoryAssignmentService.runCategoryRules(user.get(), categoryId));
     } catch (IllegalArgumentException ex) {
       return Optional.empty();
     }
@@ -232,19 +328,8 @@ public class RuleManagementService {
     return Optional.of(categoryAssignmentService.runAllRules(user.get()));
   }
 
-  private Optional<Rule> resolveRule(UserDetails userDetails, Integer ruleId) {
-    if (ruleId == null) {
-      return Optional.empty();
-    }
-    Optional<User> user = resolveUser(userDetails);
-    if (user.isEmpty()) {
-      return Optional.empty();
-    }
-    return ruleRepository.findByIdAndUserAndDeletedAtIsNull(ruleId, user.get());
-  }
-
-  private boolean moveRule(UserDetails userDetails, Integer ruleId, int delta) {
-    if (ruleId == null) {
+  private boolean moveRuleCategory(UserDetails userDetails, Integer categoryId, int delta) {
+    if (categoryId == null) {
       return false;
     }
 
@@ -253,49 +338,92 @@ public class RuleManagementService {
       return false;
     }
 
-    List<Rule> rules = new java.util.ArrayList<>(
-        ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get()));
-    int index = findRuleIndex(rules, ruleId);
+    List<Rule> orderedRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    List<Integer> categoryOrder = buildCategoryOrder(orderedRules);
+    int index = categoryOrder.indexOf(categoryId);
     if (index < 0) {
       return false;
     }
 
     int targetIndex = index + delta;
-    if (targetIndex < 0 || targetIndex >= rules.size()) {
+    if (targetIndex < 0 || targetIndex >= categoryOrder.size()) {
       return false;
     }
 
-    Collections.swap(rules, index, targetIndex);
-    reindexRules(rules);
+    Collections.swap(categoryOrder, index, targetIndex);
+    reindexByCategoryOrder(user.get(), categoryOrder);
     return true;
   }
 
-  private void reindexRules(List<Rule> rules) {
+  private void normalizeSortOrder(User user) {
+    List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user);
     for (int i = 0; i < rules.size(); i++) {
       rules.get(i).setSortOrder(i);
     }
     ruleRepository.saveAll(rules);
   }
 
-  private int findRuleIndex(List<Rule> rules, Integer ruleId) {
-    for (int i = 0; i < rules.size(); i++) {
-      if (ruleId.equals(rules.get(i).getId())) {
-        return i;
+  private void reindexByCategoryOrder(User user, List<Integer> preferredCategoryOrder) {
+    List<Rule> rules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user);
+    Map<Integer, List<Rule>> grouped = groupRulesByCategory(rules);
+    if (grouped.isEmpty()) {
+      return;
+    }
+
+    List<Integer> categoryOrder = new ArrayList<>();
+    if (preferredCategoryOrder != null) {
+      for (Integer categoryId : preferredCategoryOrder) {
+        if (categoryId != null && grouped.containsKey(categoryId) && !categoryOrder.contains(categoryId)) {
+          categoryOrder.add(categoryId);
+        }
       }
     }
-    return -1;
-  }
-
-  private RulePreparedData prepareRuleData(User user, RuleCommand command) {
-    if (command == null) {
-      return null;
+    for (Integer categoryId : grouped.keySet()) {
+      if (!categoryOrder.contains(categoryId)) {
+        categoryOrder.add(categoryId);
+      }
     }
 
-    String name = normalizeText(command.name());
-    String matchText = normalizeText(command.matchText());
-    RuleMatchField matchField = command.matchField() == null ? RuleMatchField.BOTH : command.matchField();
+    List<Rule> reordered = new ArrayList<>();
+    for (Integer categoryId : categoryOrder) {
+      reordered.addAll(grouped.get(categoryId));
+    }
 
-    if (name.isBlank() || matchText.isBlank()) {
+    for (int i = 0; i < reordered.size(); i++) {
+      reordered.get(i).setSortOrder(i);
+    }
+    ruleRepository.saveAll(reordered);
+  }
+
+  private Map<Integer, List<Rule>> groupRulesByCategory(List<Rule> orderedRules) {
+    Map<Integer, List<Rule>> grouped = new LinkedHashMap<>();
+    for (Rule rule : orderedRules) {
+      if (rule.getCategory() == null || rule.getCategory().getId() == null) {
+        continue;
+      }
+      Integer categoryId = rule.getCategory().getId();
+      grouped.computeIfAbsent(categoryId, key -> new ArrayList<>()).add(rule);
+    }
+    return grouped;
+  }
+
+  private List<Integer> buildCategoryOrder(List<Rule> orderedRules) {
+    List<Integer> order = new ArrayList<>();
+    Set<Integer> seen = new HashSet<>();
+    for (Rule rule : orderedRules) {
+      if (rule.getCategory() == null || rule.getCategory().getId() == null) {
+        continue;
+      }
+      Integer categoryId = rule.getCategory().getId();
+      if (seen.add(categoryId)) {
+        order.add(categoryId);
+      }
+    }
+    return order;
+  }
+
+  private RuleGroupPreparedData prepareRuleGroupData(User user, RuleGroupCommand command) {
+    if (command == null || command.categoryId() == null) {
       return null;
     }
 
@@ -304,13 +432,39 @@ public class RuleManagementService {
       return null;
     }
 
-    return new RulePreparedData(name, matchText, matchField, category.get());
+    List<String> fragments = parseFragments(command.fragmentsText());
+    if (fragments.isEmpty()) {
+      return null;
+    }
+
+    return new RuleGroupPreparedData(category.get(), fragments);
+  }
+
+  private List<String> parseFragments(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return List.of();
+    }
+
+    List<String> fragments = new ArrayList<>();
+    Set<String> seen = new HashSet<>();
+
+    for (String line : raw.split("\\R")) {
+      for (String part : line.split("[,;]")) {
+        String candidate = part == null ? "" : part.trim();
+        if (candidate.isBlank()) {
+          continue;
+        }
+        String dedupeKey = candidate.toLowerCase(Locale.ROOT);
+        if (seen.add(dedupeKey)) {
+          fragments.add(candidate);
+        }
+      }
+    }
+
+    return List.copyOf(fragments);
   }
 
   private Optional<Category> resolveSubCategory(User user, Integer categoryId) {
-    if (categoryId == null) {
-      return Optional.empty();
-    }
     Optional<Category> category = categoryRepository.findByIdAndUserAndDeletedAtIsNull(categoryId, user);
     if (category.isEmpty() || category.get().getParent() == null) {
       return Optional.empty();
@@ -343,27 +497,6 @@ public class RuleManagementService {
     return DATE_TIME_EN;
   }
 
-  private RuleListRow toRow(Rule rule, int index, int size, DateTimeFormatter formatter) {
-    String categoryLabel = resolveCategoryLabel(rule.getCategory());
-    String lastRun = "-";
-    if (rule.getLastRunAt() != null) {
-      lastRun = formatter.format(rule.getLastRunAt().atZone(ZoneId.systemDefault()));
-    }
-
-    RuleMatchField matchField = rule.getMatchField() == null ? RuleMatchField.BOTH : rule.getMatchField();
-    return new RuleListRow(
-        rule.getId(),
-        rule.getName(),
-        rule.getMatchText(),
-        matchField,
-        categoryLabel,
-        rule.isActive(),
-        lastRun,
-        rule.getLastMatchCount(),
-        index > 0,
-        index < (size - 1));
-  }
-
   private String resolveCategoryLabel(Category category) {
     if (category == null) {
       return "-";
@@ -374,23 +507,23 @@ public class RuleManagementService {
     return category.getParent().getName() + " -> " + category.getName();
   }
 
-  private String normalizeText(String value) {
-    if (value == null) {
-      return "";
+  private String uniqueRuleName(Category category) {
+    Integer categoryId = category == null ? null : category.getId();
+    if (categoryId == null) {
+      return "rule-" + UUID.randomUUID();
     }
-    return value.trim();
+    return "rule-" + categoryId + "-" + UUID.randomUUID();
   }
 
-  private record RulePreparedData(String name, String matchText, RuleMatchField matchField, Category category) {}
+  private record RuleGroupPreparedData(Category category, List<String> fragments) {}
 
-  public record RuleCommand(String name, String matchText, RuleMatchField matchField, Integer categoryId) {}
+  public record RuleGroupCommand(Integer categoryId, String fragmentsText) {}
 
-  public record RuleListRow(
-      Integer id,
-      String name,
-      String matchText,
-      RuleMatchField matchField,
+  public record RuleCategoryRow(
+      Integer categoryId,
       String categoryLabel,
+      List<String> fragments,
+      int fragmentCount,
       boolean active,
       String lastRunLabel,
       int lastMatchCount,
@@ -399,5 +532,5 @@ public class RuleManagementService {
 
   public record RuleCategoryOption(Integer id, String label) {}
 
-  public record RuleFormData(String name, String matchText, RuleMatchField matchField, Integer categoryId) {}
+  public record RuleGroupFormData(Integer categoryId, String categoryLabel, String fragmentsText) {}
 }

@@ -45,7 +45,7 @@ public class RuleEngine {
         continue;
       }
 
-      if (rule.getId() != null) {
+      if (!sameCategory(winningRule, rule) && rule.getId() != null) {
         conflictingRuleIds.add(rule.getId());
       }
     }
@@ -79,6 +79,21 @@ public class RuleEngine {
       return rawBooking;
     }
     return rawBooking + " " + purpose;
+  }
+
+  private boolean sameCategory(Rule first, Rule second) {
+    if (first == null || second == null || first.getCategory() == null || second.getCategory() == null) {
+      return false;
+    }
+    if (first.getCategory() == second.getCategory()) {
+      return true;
+    }
+    Integer firstCategoryId = first.getCategory().getId();
+    Integer secondCategoryId = second.getCategory().getId();
+    if (firstCategoryId == null || secondCategoryId == null) {
+      return false;
+    }
+    return firstCategoryId.equals(secondCategoryId);
   }
 
   public record RuleEvaluation(Rule winningRule, List<Integer> conflictRuleIds) {}

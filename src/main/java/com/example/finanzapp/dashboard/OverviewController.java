@@ -12,6 +12,7 @@ import com.example.finanzapp.transactions.TransactionRow;
 import com.example.finanzapp.transactions.TransactionViewService;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Optional;
 import org.springframework.context.MessageSource;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,8 +28,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class OverviewController {
-  private static final DateTimeFormatter IMPORT_FORMATTER =
+  private static final DateTimeFormatter IMPORT_FORMATTER_EN =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").withZone(ZoneId.systemDefault());
+  private static final DateTimeFormatter IMPORT_FORMATTER_DE =
+      DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm").withZone(ZoneId.systemDefault());
 
   private final UserRepository userRepository;
   private final TransactionRepository transactionRepository;
@@ -80,7 +83,7 @@ public class OverviewController {
           csvArtifactRepository.findTopByUserAndDeletedAtIsNullOrderByUploadedAtDesc(currentUser);
       if (lastImport.isPresent()) {
         CsvArtifact artifact = lastImport.get();
-        model.addAttribute("lastImportLabel", IMPORT_FORMATTER.format(artifact.getUploadedAt()));
+        model.addAttribute("lastImportLabel", formatImportTimestamp(artifact, currentUser));
         model.addAttribute("lastImportFile", artifact.getOriginalFileName());
       }
     }
@@ -131,6 +134,27 @@ public class OverviewController {
     }
     redirectAttributes.addFlashAttribute("csvImportDuplicates", result.duplicateSamples());
     redirectAttributes.addFlashAttribute("csvImportDuplicateCount", result.duplicateCount());
+  }
+
+  private String formatImportTimestamp(CsvArtifact artifact, User user) {
+    if (artifact.getUploadedAt() == null) {
+      return null;
+    }
+    return resolveImportFormatter(resolveLocale(user)).format(artifact.getUploadedAt());
+  }
+
+  private DateTimeFormatter resolveImportFormatter(Locale locale) {
+    if (Locale.GERMAN.getLanguage().equals(locale.getLanguage())) {
+      return IMPORT_FORMATTER_DE;
+    }
+    return IMPORT_FORMATTER_EN;
+  }
+
+  private Locale resolveLocale(User user) {
+    if (user != null && "DE".equalsIgnoreCase(user.getLanguage())) {
+      return Locale.GERMANY;
+    }
+    return Locale.ENGLISH;
   }
 
   private String msg(String key, Object... args) {

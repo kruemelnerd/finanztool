@@ -85,6 +85,7 @@ class OverviewControllerTest {
     user.setEmail("user@example.com");
     user.setPasswordHash("hashed");
     user.setDisplayName("Alex");
+    user.setLanguage("EN");
 
     CsvArtifact artifact = new CsvArtifact();
     artifact.setOriginalFileName("import.csv");
@@ -107,6 +108,41 @@ class OverviewControllerTest {
     assertThat(model.getAttribute("transactionCount")).isEqualTo(12L);
     assertThat(model.getAttribute("importCount")).isEqualTo(2L);
     assertThat(model.getAttribute("lastImportLabel")).isNotNull();
+    assertThat((String) model.getAttribute("lastImportLabel")).matches("\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}");
     assertThat(model.getAttribute("lastImportFile")).isEqualTo("import.csv");
+  }
+
+  @Test
+  void overviewFormatsLastImportForGermanLanguage() {
+    UserDetails principal = org.springframework.security.core.userdetails.User
+        .withUsername("de-user@example.com")
+        .password("hashed")
+        .roles("USER")
+        .build();
+
+    User user = new User();
+    user.setEmail("de-user@example.com");
+    user.setPasswordHash("hashed");
+    user.setDisplayName("Alex");
+    user.setLanguage("DE");
+
+    CsvArtifact artifact = new CsvArtifact();
+    artifact.setOriginalFileName("import.csv");
+    var uploadedAtField = ReflectionUtils.findField(CsvArtifact.class, "uploadedAt");
+    assertThat(uploadedAtField).isNotNull();
+    ReflectionUtils.makeAccessible(uploadedAtField);
+    ReflectionUtils.setField(uploadedAtField, artifact, Instant.parse("2026-02-06T12:00:00Z"));
+
+    when(userRepository.findByEmail("de-user@example.com")).thenReturn(Optional.of(user));
+    when(transactionRepository.countByUserAndDeletedAtIsNull(eq(user))).thenReturn(3L);
+    when(csvArtifactRepository.countByUserAndDeletedAtIsNull(eq(user))).thenReturn(1L);
+    when(csvArtifactRepository.findTopByUserAndDeletedAtIsNullOrderByUploadedAtDesc(eq(user)))
+        .thenReturn(Optional.of(artifact));
+
+    Model model = new ConcurrentModel();
+    String view = controller.overview(model, principal);
+
+    assertThat(view).isEqualTo("overview");
+    assertThat((String) model.getAttribute("lastImportLabel")).matches("\\d{2}\\.\\d{2}\\.\\d{4} \\d{2}:\\d{2}");
   }
 }

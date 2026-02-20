@@ -1,7 +1,6 @@
 package com.example.finanzapp.rules;
 
-import com.example.finanzapp.domain.RuleMatchField;
-import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -38,60 +37,72 @@ public class RulesController {
 
   @GetMapping("/rules/new")
   public String newRule(
+      @RequestParam(name = "categoryId", required = false) Integer categoryId,
       Model model,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    if (!prepareRuleFormModel(model, userDetails, null, false, "", "", RuleMatchField.BOTH, null)) {
+    List<RuleManagementService.RuleCategoryOption> options = ruleManagementService.loadCategoryOptions(userDetails);
+    if (options.isEmpty()) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.generic"));
       return "redirect:/rules";
     }
-    return "rule-form";
+
+    if (categoryId == null) {
+      model.addAttribute("pageTitle", "page.rules");
+      model.addAttribute("categoryOptions", options);
+      return "rule-category-select";
+    }
+
+    Optional<String> label = options.stream()
+        .filter(option -> option.id().equals(categoryId))
+        .map(RuleManagementService.RuleCategoryOption::label)
+        .findFirst();
+    if (label.isEmpty()) {
+      redirectAttributes.addFlashAttribute("rulesStatus", "error");
+      redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.validation"));
+      return "redirect:/rules/new";
+    }
+
+    model.addAttribute("pageTitle", "page.rules");
+    model.addAttribute("editMode", false);
+    model.addAttribute("categoryId", categoryId);
+    model.addAttribute("categoryLabel", label.get());
+    model.addAttribute("fragmentsText", "");
+    return "rule-fragments-form";
   }
 
-  @GetMapping("/rules/{id}/edit")
-  public String editRule(
-      @PathVariable("id") Integer id,
+  @GetMapping("/rules/{categoryId}/edit")
+  public String editRuleGroup(
+      @PathVariable("categoryId") Integer categoryId,
       Model model,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    Optional<RuleManagementService.RuleFormData> formData = ruleManagementService.loadRuleFormData(userDetails, id);
+    Optional<RuleManagementService.RuleGroupFormData> formData =
+        ruleManagementService.loadRuleGroupFormData(userDetails, categoryId);
     if (formData.isEmpty()) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
       return "redirect:/rules";
     }
 
-    if (!prepareRuleFormModel(
-        model,
-        userDetails,
-        id,
-        true,
-        formData.get().name(),
-        formData.get().matchText(),
-        formData.get().matchField(),
-        formData.get().categoryId())) {
-      redirectAttributes.addFlashAttribute("rulesStatus", "error");
-      redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.generic"));
-      return "redirect:/rules";
-    }
-    return "rule-form";
+    model.addAttribute("pageTitle", "page.rules");
+    model.addAttribute("editMode", true);
+    model.addAttribute("categoryId", formData.get().categoryId());
+    model.addAttribute("categoryLabel", formData.get().categoryLabel());
+    model.addAttribute("fragmentsText", formData.get().fragmentsText());
+    return "rule-fragments-form";
   }
 
   @PostMapping("/rules")
-  public String createRule(
-      @RequestParam("name") String name,
-      @RequestParam("matchText") String matchText,
-      @RequestParam("matchField") String matchFieldRaw,
+  public String createRuleGroup(
       @RequestParam("categoryId") Integer categoryId,
+      @RequestParam("fragmentsText") String fragmentsText,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    RuleManagementService.RuleCommand command = new RuleManagementService.RuleCommand(
-        name,
-        matchText,
-        parseMatchField(matchFieldRaw),
-        categoryId);
-    if (!ruleManagementService.createRule(userDetails, command)) {
+    RuleManagementService.RuleGroupCommand command =
+        new RuleManagementService.RuleGroupCommand(categoryId, fragmentsText);
+    if (!ruleManagementService.createRuleGroup(userDetails, command)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.validation"));
       return "redirect:/rules";
@@ -102,21 +113,15 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}")
-  public String updateRule(
-      @PathVariable("id") Integer id,
-      @RequestParam("name") String name,
-      @RequestParam("matchText") String matchText,
-      @RequestParam("matchField") String matchFieldRaw,
-      @RequestParam("categoryId") Integer categoryId,
+  @PostMapping("/rules/{categoryId}")
+  public String updateRuleGroup(
+      @PathVariable("categoryId") Integer categoryId,
+      @RequestParam("fragmentsText") String fragmentsText,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    RuleManagementService.RuleCommand command = new RuleManagementService.RuleCommand(
-        name,
-        matchText,
-        parseMatchField(matchFieldRaw),
-        categoryId);
-    if (!ruleManagementService.updateRule(userDetails, id, command)) {
+    RuleManagementService.RuleGroupCommand command =
+        new RuleManagementService.RuleGroupCommand(categoryId, fragmentsText);
+    if (!ruleManagementService.updateRuleGroup(userDetails, categoryId, command)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.validation"));
       return "redirect:/rules";
@@ -127,12 +132,12 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}/toggle")
-  public String toggleRule(
-      @PathVariable("id") Integer id,
+  @PostMapping("/rules/{categoryId}/toggle")
+  public String toggleRuleCategory(
+      @PathVariable("categoryId") Integer categoryId,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    if (!ruleManagementService.toggleRule(userDetails, id)) {
+    if (!ruleManagementService.toggleRuleCategory(userDetails, categoryId)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
       return "redirect:/rules";
@@ -143,12 +148,12 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}/move-up")
-  public String moveRuleUp(
-      @PathVariable("id") Integer id,
+  @PostMapping("/rules/{categoryId}/move-up")
+  public String moveRuleCategoryUp(
+      @PathVariable("categoryId") Integer categoryId,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    if (!ruleManagementService.moveRuleUp(userDetails, id)) {
+    if (!ruleManagementService.moveRuleCategoryUp(userDetails, categoryId)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
       return "redirect:/rules";
@@ -159,12 +164,12 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}/move-down")
-  public String moveRuleDown(
-      @PathVariable("id") Integer id,
+  @PostMapping("/rules/{categoryId}/move-down")
+  public String moveRuleCategoryDown(
+      @PathVariable("categoryId") Integer categoryId,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    if (!ruleManagementService.moveRuleDown(userDetails, id)) {
+    if (!ruleManagementService.moveRuleCategoryDown(userDetails, categoryId)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
       return "redirect:/rules";
@@ -175,12 +180,13 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}/run")
-  public String runRule(
-      @PathVariable("id") Integer id,
+  @PostMapping("/rules/{categoryId}/run")
+  public String runRuleCategory(
+      @PathVariable("categoryId") Integer categoryId,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    Optional<CategoryAssignmentService.RuleRunStats> stats = ruleManagementService.runSingleRule(userDetails, id);
+    Optional<CategoryAssignmentService.RuleRunStats> stats =
+        ruleManagementService.runCategoryRules(userDetails, categoryId);
     if (stats.isEmpty()) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
@@ -212,12 +218,12 @@ public class RulesController {
     return "redirect:/rules";
   }
 
-  @PostMapping("/rules/{id}/delete")
-  public String deleteRule(
-      @PathVariable("id") Integer id,
+  @PostMapping("/rules/{categoryId}/delete")
+  public String deleteRuleCategory(
+      @PathVariable("categoryId") Integer categoryId,
       @AuthenticationPrincipal UserDetails userDetails,
       RedirectAttributes redirectAttributes) {
-    if (!ruleManagementService.softDeleteRule(userDetails, id)) {
+    if (!ruleManagementService.softDeleteRuleCategory(userDetails, categoryId)) {
       redirectAttributes.addFlashAttribute("rulesStatus", "error");
       redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
       return "redirect:/rules";
@@ -226,44 +232,6 @@ public class RulesController {
     redirectAttributes.addFlashAttribute("rulesStatus", "success");
     redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.delete.success"));
     return "redirect:/rules";
-  }
-
-  private boolean prepareRuleFormModel(
-      Model model,
-      UserDetails userDetails,
-      Integer ruleId,
-      boolean editMode,
-      String name,
-      String matchText,
-      RuleMatchField matchField,
-      Integer categoryId) {
-    model.addAttribute("pageTitle", "page.rules");
-    model.addAttribute("editMode", editMode);
-    model.addAttribute("ruleId", ruleId);
-    model.addAttribute("ruleName", name);
-    model.addAttribute("matchText", matchText);
-    model.addAttribute("selectedMatchField", matchField == null ? RuleMatchField.BOTH.name() : matchField.name());
-    model.addAttribute("selectedCategoryId", categoryId);
-    model.addAttribute("matchFields", RuleMatchField.values());
-
-    java.util.List<RuleManagementService.RuleCategoryOption> options = ruleManagementService.loadCategoryOptions(userDetails);
-    if (options.isEmpty()) {
-      return false;
-    }
-    model.addAttribute("categoryOptions", options);
-    return true;
-  }
-
-  private RuleMatchField parseMatchField(String raw) {
-    if (raw == null || raw.isBlank()) {
-      return RuleMatchField.BOTH;
-    }
-
-    try {
-      return RuleMatchField.valueOf(raw.trim().toUpperCase(Locale.ROOT));
-    } catch (IllegalArgumentException ignored) {
-      return RuleMatchField.BOTH;
-    }
   }
 
   private String msg(String key, Object... args) {

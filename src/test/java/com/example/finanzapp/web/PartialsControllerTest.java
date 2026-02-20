@@ -9,9 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.finanzapp.domain.BalanceDaily;
+import com.example.finanzapp.domain.Category;
+import com.example.finanzapp.domain.CategoryAssignedBy;
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.BalanceDailyRepository;
+import com.example.finanzapp.repository.CategoryRepository;
 import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import java.time.LocalDate;
@@ -37,6 +40,9 @@ class PartialsControllerTest {
   @Autowired
   private TransactionRepository transactionRepository;
 
+  @Autowired
+  private CategoryRepository categoryRepository;
+
   @Test
   void balanceChartPartialRendersEmptyState() throws Exception {
     mockMvc.perform(get("/partials/balance-chart").with(user("user")))
@@ -59,6 +65,52 @@ class PartialsControllerTest {
         .andExpect(content().string(containsString("Date")))
         .andExpect(content().string(containsString("Amount")))
         .andExpect(content().string(containsString("Category")));
+  }
+
+  @Test
+  void transactionsTableShowsManualBadgeAndLockStatus() throws Exception {
+    User user = userRepository.findByEmail("manual-lock-user@example.com").orElseGet(() -> {
+      User created = new User();
+      created.setEmail("manual-lock-user@example.com");
+      created.setPasswordHash("hashed");
+      created.setLanguage("EN");
+      return userRepository.save(created);
+    });
+    user.setLanguage("EN");
+    userRepository.save(user);
+
+    transactionRepository.deleteByUser(user);
+    categoryRepository.deleteAll(categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNotNullOrderBySortOrderAscIdAsc(user));
+    categoryRepository.deleteAll(categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(user));
+
+    Category parent = new Category();
+    parent.setUser(user);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(user);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Transaction tx = new Transaction();
+    tx.setUser(user);
+    tx.setBookingDateTime(LocalDateTime.now().withSecond(0).withNano(0));
+    tx.setPartnerName("Sports Shop");
+    tx.setPurposeText("Shoes");
+    tx.setAmountCents(-9900L);
+    tx.setCategory(sub);
+    tx.setCategoryAssignedBy(CategoryAssignedBy.MANUAL);
+    tx.setCategoryLocked(true);
+    transactionRepository.save(tx);
+
+    mockMvc.perform(get("/partials/transactions-table").with(user("manual-lock-user@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Manual")))
+        .andExpect(content().string(containsString("Locked")));
   }
 
   @Test
