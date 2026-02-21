@@ -17,5 +17,7 @@ public interface RuleRepository extends JpaRepository<Rule, Integer> {
 
   List<Rule> findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(User user, Integer categoryId);
 
+  long countByUserAndCategoryIdAndDeletedAtIsNull(User user, Integer categoryId);
+
   List<Rule> findByUserAndCategoryIdAndIsActiveTrueAndDeletedAtIsNullOrderBySortOrderAscIdAsc(User user, Integer categoryId);
 }

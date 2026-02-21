@@ -2,6 +2,7 @@ package com.example.finanzapp.repository;
 
 import com.example.finanzapp.domain.Transaction;
 import com.example.finanzapp.domain.User;
+import com.example.finanzapp.domain.Category;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,8 @@ public interface TransactionRepository extends JpaRepository<Transaction, Intege
   Optional<Transaction> findByIdAndUserAndDeletedAtIsNull(Integer id, User user);
 
   long countByUserAndDeletedAtIsNull(User user);
+
+  long countByUserAndCategoryAndDeletedAtIsNull(User user, Category category);
 
   long countByUserAndDeletedAtIsNotNull(User user);
 

@@ -41,6 +41,11 @@
               th:classappend="${currentPage == 'page.rules'} ? ' is-active'"
               th:attr="aria-current=${currentPage == 'page.rules'} ? 'page' : null"
               th:text="#{nav.rules}">Rules</a>
+          <a
+              th:href="@{/categories}"
+              th:classappend="${currentPage == 'page.categories'} ? ' is-active'"
+              th:attr="aria-current=${currentPage == 'page.categories'} ? 'page' : null"
+              th:text="#{nav.categories}">Categories</a>
           <a href="#" th:text="#{nav.budgets}">Budgets</a>
           <a href="#" th:text="#{nav.investments}">Investments</a>
           <a

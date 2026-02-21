@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
@@ -30,9 +31,14 @@ import com.example.finanzapp.repository.TransactionRepository;
 import com.example.finanzapp.repository.UserRepository;
 import com.example.finanzapp.settings.DataDeletionService;
 import java.time.LocalDateTime;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -126,6 +132,13 @@ class PagesControllerTest {
   }
 
   @Test
+  void categoriesPageLoadsForAuthenticatedUser() throws Exception {
+    mockMvc.perform(get("/categories").with(user("user")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("New category")));
+  }
+
+  @Test
   void sankeyPageLoadsForAuthenticatedUser() throws Exception {
     mockMvc.perform(get("/reports/sankey").with(user("user")))
         .andExpect(status().isOk())
@@ -173,8 +186,8 @@ class PagesControllerTest {
             .param("year", "2025"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.year", is(2025)))
-        .andExpect(jsonPath("$.links[?(@.source=='income')].valueCents", hasItem(150000)))
-        .andExpect(jsonPath("$.links[?(@.source=='expense')].valueCents", hasItem(4200)));
+        .andExpect(jsonPath("$.links[?(@.target=='center')].valueCents", hasItem(150000)))
+        .andExpect(jsonPath("$.links[?(@.source=='center')].valueCents", hasItem(4200)));
   }
 
   @Test
@@ -331,6 +344,135 @@ class PagesControllerTest {
   }
 
   @Test
+  void rulesExportReturnsJsonAttachment() throws Exception {
+    createUser("rules-export@example.com");
+    User owner = userRepository.findByEmail("rules-export@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Rule first = new Rule();
+    first.setUser(owner);
+    first.setName("Rule One");
+    first.setMatchText("intersport");
+    first.setMatchField(RuleMatchField.BOTH);
+    first.setCategory(sub);
+    first.setSortOrder(0);
+    ruleRepository.save(first);
+
+    Rule second = new Rule();
+    second.setUser(owner);
+    second.setName("Rule Two");
+    second.setMatchText("sportcheck");
+    second.setMatchField(RuleMatchField.BOTH);
+    second.setCategory(sub);
+    second.setSortOrder(1);
+    ruleRepository.save(second);
+
+    mockMvc.perform(get("/rules/export").with(user("rules-export@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Type", containsString("application/json")))
+        .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"rules-export.json\"")))
+        .andExpect(content().string(containsString("\"format\" : \"finanztool-rules-v1\"")))
+        .andExpect(content().string(containsString("\"parentCategory\" : \"Shopping\"")))
+        .andExpect(content().string(containsString("\"category\" : \"Sport\"")))
+        .andExpect(content().string(containsString("\"intersport\"")));
+  }
+
+  @Test
+  void rulesImportMergesRulesFromJsonFile() throws Exception {
+    createUser("rules-import@example.com");
+    User owner = userRepository.findByEmail("rules-import@example.com").orElseThrow();
+
+    Category oldParent = new Category();
+    oldParent.setUser(owner);
+    oldParent.setName("Legacy");
+    oldParent.setSortOrder(0);
+    oldParent = categoryRepository.save(oldParent);
+
+    Category oldSub = new Category();
+    oldSub.setUser(owner);
+    oldSub.setParent(oldParent);
+    oldSub.setName("Old");
+    oldSub.setSortOrder(0);
+    oldSub = categoryRepository.save(oldSub);
+
+    Rule oldRule = new Rule();
+    oldRule.setUser(owner);
+    oldRule.setName("Legacy Rule");
+    oldRule.setMatchText("legacy");
+    oldRule.setMatchField(RuleMatchField.BOTH);
+    oldRule.setCategory(oldSub);
+    oldRule.setSortOrder(0);
+    oldRule = ruleRepository.save(oldRule);
+
+    Category shoppingParent = new Category();
+    shoppingParent.setUser(owner);
+    shoppingParent.setName("Shopping");
+    shoppingParent.setSortOrder(1);
+    shoppingParent = categoryRepository.save(shoppingParent);
+
+    Category sportSub = new Category();
+    sportSub.setUser(owner);
+    sportSub.setParent(shoppingParent);
+    sportSub.setName("Sport");
+    sportSub.setSortOrder(0);
+    sportSub = categoryRepository.save(sportSub);
+    Integer sportSubId = sportSub.getId();
+
+    String importJson = """
+        {
+          "format": "finanztool-rules-v1",
+          "groups": [
+            {
+              "parentCategory": "Shopping",
+              "category": "Sport",
+              "matchField": "BOTH",
+              "active": true,
+              "fragments": ["intersport", "sportcheck"]
+            }
+          ]
+        }
+        """;
+
+    MockMultipartFile file = new MockMultipartFile(
+        "file",
+        "rules.json",
+        "application/json",
+        importJson.getBytes(StandardCharsets.UTF_8));
+
+    mockMvc.perform(multipart("/rules/import")
+            .file(file)
+            .with(user("rules-import@example.com"))
+            .with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/rules"))
+        .andExpect(flash().attribute("rulesStatus", "success"));
+
+    Rule persistedOldRule = ruleRepository.findById(oldRule.getId()).orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(persistedOldRule.getDeletedAt()).isNull();
+
+    java.util.List<Rule> activeRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner);
+    org.assertj.core.api.Assertions.assertThat(activeRules).hasSize(3);
+    org.assertj.core.api.Assertions.assertThat(activeRules)
+        .extracting(Rule::getMatchText)
+        .containsExactly("legacy", "intersport", "sportcheck");
+    org.assertj.core.api.Assertions.assertThat(activeRules)
+        .filteredOn(rule -> !"legacy".equals(rule.getMatchText()))
+        .allMatch(rule -> sportSubId.equals(rule.getCategory().getId()));
+  }
+
+  @Test
   void updateProfilePersistsDisplayName() throws Exception {
     createUser("user@example.com");
 
@@ -440,6 +582,153 @@ class PagesControllerTest {
     org.assertj.core.api.Assertions.assertThat(updated.getCategory().getId()).isEqualTo(sub.getId());
     org.assertj.core.api.Assertions.assertThat(updated.getCategoryAssignedBy()).isEqualTo(CategoryAssignedBy.MANUAL);
     org.assertj.core.api.Assertions.assertThat(updated.isCategoryLocked()).isTrue();
+  }
+
+  @Test
+  void createSubcategoryStoresNewEntry() throws Exception {
+    createUser("categories-create@example.com");
+    User owner = userRepository.findByEmail("categories-create@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    mockMvc.perform(post("/categories/subcategories")
+            .with(user("categories-create@example.com"))
+            .with(csrf())
+            .param("parentId", parent.getId().toString())
+            .param("name", "Sport"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    java.util.List<Category> children = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, parent);
+    org.assertj.core.api.Assertions.assertThat(children)
+        .extracting(Category::getName)
+        .contains("Sport");
+  }
+
+  @Test
+  void updateSubcategoryCanMoveToOtherParent() throws Exception {
+    createUser("categories-update@example.com");
+    User owner = userRepository.findByEmail("categories-update@example.com").orElseThrow();
+
+    Category firstParent = new Category();
+    firstParent.setUser(owner);
+    firstParent.setName("Shopping");
+    firstParent.setSortOrder(0);
+    firstParent = categoryRepository.save(firstParent);
+
+    Category secondParent = new Category();
+    secondParent.setUser(owner);
+    secondParent.setName("Freizeit");
+    secondParent.setSortOrder(1);
+    secondParent = categoryRepository.save(secondParent);
+
+    Category subcategory = new Category();
+    subcategory.setUser(owner);
+    subcategory.setParent(firstParent);
+    subcategory.setName("Alt");
+    subcategory.setSortOrder(0);
+    subcategory = categoryRepository.save(subcategory);
+
+    mockMvc.perform(post("/categories/subcategories/" + subcategory.getId())
+            .with(user("categories-update@example.com"))
+            .with(csrf())
+            .param("parentId", secondParent.getId().toString())
+            .param("name", "Neu"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    Category persisted = categoryRepository.findById(subcategory.getId()).orElseThrow();
+    org.assertj.core.api.Assertions.assertThat(persisted.getName()).isEqualTo("Neu");
+    org.assertj.core.api.Assertions.assertThat(persisted.getParent()).isNotNull();
+    org.assertj.core.api.Assertions.assertThat(persisted.getParent().getId()).isEqualTo(secondParent.getId());
+  }
+
+  @Test
+  void reorderCategoriesPersistsParentAndSubcategoryOrder() throws Exception {
+    createUser("categories-reorder@example.com");
+    mockMvc.perform(get("/categories").with(user("categories-reorder@example.com")))
+        .andExpect(status().isOk());
+
+    User owner = userRepository.findByEmail("categories-reorder@example.com").orElseThrow();
+
+    Category firstParent = new Category();
+    firstParent.setUser(owner);
+    firstParent.setName("TestParentA");
+    firstParent.setSortOrder(0);
+    firstParent = categoryRepository.save(firstParent);
+
+    Category secondParent = new Category();
+    secondParent.setUser(owner);
+    secondParent.setName("TestParentB");
+    secondParent.setSortOrder(1);
+    secondParent = categoryRepository.save(secondParent);
+
+    Category firstSub = new Category();
+    firstSub.setUser(owner);
+    firstSub.setParent(firstParent);
+    firstSub.setName("TestSubA");
+    firstSub.setSortOrder(0);
+    firstSub = categoryRepository.save(firstSub);
+
+    Category secondSub = new Category();
+    secondSub.setUser(owner);
+    secondSub.setParent(secondParent);
+    secondSub.setName("TestSubB");
+    secondSub.setSortOrder(0);
+    secondSub = categoryRepository.save(secondSub);
+
+    java.util.List<Category> orderedParents = categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(owner);
+    java.util.List<Integer> reorderedParentIds = new ArrayList<>(orderedParents.stream().map(Category::getId).toList());
+    reorderedParentIds.remove(Integer.valueOf(secondParent.getId()));
+    reorderedParentIds.add(reorderedParentIds.indexOf(firstParent.getId()), secondParent.getId());
+
+    Map<Integer, java.util.List<Integer>> childIdsByParent = new LinkedHashMap<>();
+    for (Category parent : orderedParents) {
+      java.util.List<Integer> childIds = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, parent)
+          .stream()
+          .map(Category::getId)
+          .toList();
+      childIdsByParent.put(parent.getId(), new ArrayList<>(childIds));
+    }
+
+    childIdsByParent.get(firstParent.getId()).remove(Integer.valueOf(firstSub.getId()));
+    childIdsByParent.get(secondParent.getId()).add(firstSub.getId());
+
+    java.util.List<Map<String, Object>> parentCommands = new ArrayList<>();
+    for (Integer parentId : reorderedParentIds) {
+      parentCommands.add(Map.of(
+          "parentId", parentId,
+          "subcategoryIds", childIdsByParent.getOrDefault(parentId, java.util.List.of())));
+    }
+    String payload = new com.fasterxml.jackson.databind.ObjectMapper()
+        .writeValueAsString(Map.of("parents", parentCommands));
+
+    mockMvc.perform(post("/categories/reorder")
+            .with(user("categories-reorder@example.com"))
+            .with(csrf().asHeader())
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(payload))
+        .andExpect(status().isOk());
+
+    java.util.List<Category> parents = categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(owner);
+    java.util.List<Integer> parentIds = parents.stream().map(Category::getId).toList();
+    org.assertj.core.api.Assertions.assertThat(parentIds).contains(secondParent.getId(), firstParent.getId());
+    org.assertj.core.api.Assertions.assertThat(parentIds.indexOf(secondParent.getId()))
+        .isLessThan(parentIds.indexOf(firstParent.getId()));
+
+    java.util.List<Category> secondParentChildren = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, secondParent);
+    org.assertj.core.api.Assertions.assertThat(secondParentChildren)
+        .extracting(Category::getId)
+        .containsExactly(secondSub.getId(), firstSub.getId());
+
+    java.util.List<Category> firstParentChildren = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, firstParent);
+    org.assertj.core.api.Assertions.assertThat(firstParentChildren).isEmpty();
   }
 
   @Test

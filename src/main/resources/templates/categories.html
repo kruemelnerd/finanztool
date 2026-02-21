@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layouts/base :: layout(~{::section})}">
+  <section class="categories-page">
+    <div
+      class="notice"
+      th:if="${categoriesMessage}"
+      th:classappend="${categoriesStatus} == 'error' ? ' notice-error' : ' notice-success'">
+      <span th:text="${categoriesMessage}">Categories status</span>
+    </div>
+
+    <div class="categories-toolbar">
+      <form id="categories-create-parent-form" th:action="@{/categories/parents}" method="post" class="categories-hidden-form">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <input type="hidden" name="name" value="" />
+      </form>
+      <button type="button" class="button-link" id="categories-create-parent-button" th:text="#{categories.parent.createButton}">New category</button>
+      <span class="subtle" th:text="#{categories.dragHint}">Drag and drop categories to reorder.</span>
+    </div>
+
+    <div
+      class="categories-board"
+      id="categories-board"
+      th:attr="
+        data-reorder-url=@{/categories/reorder},
+        data-csrf-token=${_csrf.token},
+        data-csrf-header=${_csrf.headerName},
+        data-reorder-error=#{categories.error.reorder},
+        data-prompt-new-parent=#{categories.prompt.newParent},
+        data-prompt-new-sub=#{categories.prompt.newSubcategory},
+        data-prompt-edit-parent=#{categories.prompt.editParent},
+        data-prompt-edit-sub=#{categories.prompt.editSubcategory},
+        data-confirm-delete-parent=#{confirm.deleteParentCategory},
+        data-confirm-delete-sub=#{confirm.deleteSubcategory}">
+
+      <div class="empty-state" th:if="${#lists.isEmpty(parents)}" th:text="#{categories.empty}">No categories configured yet.</div>
+
+      <div class="category-group" th:if="${!#lists.isEmpty(parents)}" th:each="parent : ${parents}" th:attr="data-parent-id=${parent.id}">
+        <div class="category-parent-row" draggable="true">
+          <span class="drag-handle" aria-hidden="true">::</span>
+          <span class="category-name" th:text="${parent.name}">Essen</span>
+
+          <div class="category-actions">
+              <button
+                type="button"
+                class="icon-button"
+                th:disabled="${parent.systemCategory}"
+                th:title="#{categories.edit}"
+                th:attr="data-edit-parent=${parent.id},data-current-name=${parent.name},aria-label=#{categories.edit}">
+                <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              </button>
+
+            <form
+              th:action="@{'/categories/parents/' + ${parent.id} + '/delete'}"
+              method="post"
+              th:attr="data-delete-parent-form=${parent.id}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button
+                  type="submit"
+                  class="icon-button"
+                  th:disabled="${parent.systemCategory}"
+                  th:title="#{categories.delete}"
+                  th:attr="aria-label=#{categories.delete}">
+                  <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                </button>
+              </form>
+
+            <button
+              type="button"
+              class="button-link category-add-sub"
+              th:attr="data-add-sub=${parent.id}"
+              th:text="#{categories.subcategory.newButton}">New subcategory</button>
+          </div>
+        </div>
+
+        <form th:action="@{'/categories/parents/' + ${parent.id}}" method="post" class="categories-hidden-form" th:attr="id=${'edit-parent-' + parent.id}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <input type="hidden" name="name" th:value="${parent.name}" />
+        </form>
+
+        <form th:action="@{/categories/subcategories}" method="post" class="categories-hidden-form" th:attr="id=${'create-sub-' + parent.id}">
+          <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+          <input type="hidden" name="parentId" th:value="${parent.id}" />
+          <input type="hidden" name="name" value="" />
+        </form>
+
+        <div class="category-sub-list" th:attr="data-sub-list=${parent.id}">
+          <div class="category-sub-row" draggable="true" th:each="subcategory : ${subcategories}" th:if="${subcategory.parentId == parent.id}" th:attr="data-sub-id=${subcategory.id}">
+            <span class="drag-handle" aria-hidden="true">::</span>
+            <span class="category-name" th:text="${subcategory.name}">FastFood</span>
+
+            <div class="category-actions">
+              <div class="category-badges">
+                <span class="category-chip category-chip-default" th:if="${subcategory.defaultCategory}" th:text="#{categories.badge.default}">Default</span>
+                <span class="category-chip" th:if="${subcategory.systemCategory}" th:text="#{categories.badge.system}">System</span>
+              </div>
+
+              <button
+                type="button"
+                class="icon-button"
+                th:disabled="${subcategory.systemCategory}"
+                th:title="#{categories.edit}"
+                th:attr="data-edit-sub=${subcategory.id},data-current-name=${subcategory.name},aria-label=#{categories.edit}">
+                <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              </button>
+
+              <form
+                th:action="@{'/categories/subcategories/' + ${subcategory.id} + '/delete'}"
+                method="post"
+                th:attr="data-delete-sub-form=${subcategory.id}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button
+                  type="submit"
+                  class="icon-button"
+                  th:disabled="${subcategory.systemCategory}"
+                  th:title="#{categories.delete}"
+                  th:attr="aria-label=#{categories.delete}">
+                  <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M19 6l-1 14H6L5 6" />
+                    <path d="M10 11v6" />
+                    <path d="M14 11v6" />
+                  </svg>
+                </button>
+              </form>
+            </div>
+
+            <form th:action="@{'/categories/subcategories/' + ${subcategory.id}}" method="post" class="categories-hidden-form" th:attr="id=${'edit-sub-' + subcategory.id}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="parentId" th:value="${subcategory.parentId}" />
+              <input type="hidden" name="name" th:value="${subcategory.name}" />
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const board = document.getElementById("categories-board");
+        if (!board) {
+          return;
+        }
+
+        const promptNewParent = board.dataset.promptNewParent || "New category";
+        const promptNewSub = board.dataset.promptNewSub || "New subcategory";
+        const promptEditParent = board.dataset.promptEditParent || "Edit category";
+        const promptEditSub = board.dataset.promptEditSub || "Edit subcategory";
+        const reorderError = board.dataset.reorderError || "Could not reorder categories.";
+        const csrfToken = board.dataset.csrfToken;
+        const csrfHeader = board.dataset.csrfHeader || "X-CSRF-TOKEN";
+
+        const createParentButton = document.getElementById("categories-create-parent-button");
+        const createParentForm = document.getElementById("categories-create-parent-form");
+        if (createParentButton && createParentForm) {
+          createParentButton.addEventListener("click", () => {
+            const value = window.prompt(promptNewParent, "");
+            if (value == null) {
+              return;
+            }
+            const normalized = value.trim();
+            if (!normalized) {
+              return;
+            }
+            createParentForm.querySelector("input[name='name']").value = normalized;
+            createParentForm.submit();
+          });
+        }
+
+        board.querySelectorAll("[data-add-sub]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const parentId = button.getAttribute("data-add-sub");
+            if (!parentId) {
+              return;
+            }
+            const value = window.prompt(promptNewSub, "");
+            if (value == null) {
+              return;
+            }
+            const normalized = value.trim();
+            if (!normalized) {
+              return;
+            }
+            const form = document.getElementById("create-sub-" + parentId);
+            if (!form) {
+              return;
+            }
+            form.querySelector("input[name='name']").value = normalized;
+            form.submit();
+          });
+        });
+
+        board.querySelectorAll("[data-edit-parent]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const parentId = button.getAttribute("data-edit-parent");
+            if (!parentId) {
+              return;
+            }
+            const currentName = button.getAttribute("data-current-name") || "";
+            const value = window.prompt(promptEditParent, currentName);
+            if (value == null) {
+              return;
+            }
+            const normalized = value.trim();
+            if (!normalized) {
+              return;
+            }
+            const form = document.getElementById("edit-parent-" + parentId);
+            if (!form) {
+              return;
+            }
+            form.querySelector("input[name='name']").value = normalized;
+            form.submit();
+          });
+        });
+
+        board.querySelectorAll("[data-edit-sub]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const subId = button.getAttribute("data-edit-sub");
+            if (!subId) {
+              return;
+            }
+            const currentName = button.getAttribute("data-current-name") || "";
+            const value = window.prompt(promptEditSub, currentName);
+            if (value == null) {
+              return;
+            }
+            const normalized = value.trim();
+            if (!normalized) {
+              return;
+            }
+            const form = document.getElementById("edit-sub-" + subId);
+            if (!form) {
+              return;
+            }
+            form.querySelector("input[name='name']").value = normalized;
+            form.submit();
+          });
+        });
+
+        board.querySelectorAll("[data-delete-parent-form]").forEach((form) => {
+          form.addEventListener("submit", (event) => {
+            const ok = window.confirm(board.dataset.confirmDeleteParent || "Delete category?");
+            if (!ok) {
+              event.preventDefault();
+            }
+          });
+        });
+
+        board.querySelectorAll("[data-delete-sub-form]").forEach((form) => {
+          form.addEventListener("submit", (event) => {
+            const ok = window.confirm(board.dataset.confirmDeleteSub || "Delete subcategory?");
+            if (!ok) {
+              event.preventDefault();
+            }
+          });
+        });
+
+        let dragMode = null;
+        let draggedGroup = null;
+        let draggedSub = null;
+
+        const groups = () => Array.from(board.querySelectorAll(".category-group"));
+
+        const parentRows = () => Array.from(board.querySelectorAll(".category-parent-row"));
+        parentRows().forEach((row) => {
+          row.addEventListener("dragstart", (event) => {
+            dragMode = "parent";
+            draggedGroup = row.closest(".category-group");
+            if (!draggedGroup) {
+              dragMode = null;
+              return;
+            }
+            draggedGroup.classList.add("is-dragging-parent");
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = "move";
+            }
+          });
+
+          row.addEventListener("dragend", async () => {
+            if (dragMode === "parent") {
+              await persistReorder();
+            }
+            if (draggedGroup) {
+              draggedGroup.classList.remove("is-dragging-parent");
+            }
+            dragMode = null;
+            draggedGroup = null;
+          });
+        });
+
+        board.addEventListener("dragover", (event) => {
+          if (dragMode !== "parent" || !draggedGroup) {
+            return;
+          }
+          event.preventDefault();
+          const ordered = groups().filter((group) => group !== draggedGroup);
+          let insertBefore = null;
+          let closest = Number.NEGATIVE_INFINITY;
+
+          for (const group of ordered) {
+            const rect = group.getBoundingClientRect();
+            const offset = event.clientY - rect.top - rect.height / 2;
+            if (offset < 0 && offset > closest) {
+              closest = offset;
+              insertBefore = group;
+            }
+          }
+
+          if (insertBefore) {
+            board.insertBefore(draggedGroup, insertBefore);
+          } else {
+            board.appendChild(draggedGroup);
+          }
+        });
+
+        const subLists = () => Array.from(board.querySelectorAll(".category-sub-list"));
+        const subRows = () => Array.from(board.querySelectorAll(".category-sub-row"));
+
+        const findSubInsertTarget = (container, y, movingRow) => {
+          const candidates = Array.from(container.querySelectorAll(".category-sub-row")).filter((row) => row !== movingRow);
+          let insertBefore = null;
+          let closest = Number.NEGATIVE_INFINITY;
+          for (const row of candidates) {
+            const rect = row.getBoundingClientRect();
+            const offset = y - rect.top - rect.height / 2;
+            if (offset < 0 && offset > closest) {
+              closest = offset;
+              insertBefore = row;
+            }
+          }
+          return insertBefore;
+        };
+
+        subRows().forEach((row) => {
+          row.addEventListener("dragstart", (event) => {
+            dragMode = "sub";
+            draggedSub = row;
+            row.classList.add("is-dragging-sub");
+            if (event.dataTransfer) {
+              event.dataTransfer.effectAllowed = "move";
+            }
+          });
+
+          row.addEventListener("dragend", async () => {
+            if (dragMode === "sub") {
+              await persistReorder();
+            }
+            row.classList.remove("is-dragging-sub");
+            dragMode = null;
+            draggedSub = null;
+          });
+        });
+
+        subLists().forEach((list) => {
+          list.addEventListener("dragover", (event) => {
+            if (dragMode !== "sub" || !draggedSub) {
+              return;
+            }
+            event.preventDefault();
+            const target = findSubInsertTarget(list, event.clientY, draggedSub);
+            if (target) {
+              list.insertBefore(draggedSub, target);
+            } else {
+              list.appendChild(draggedSub);
+            }
+          });
+        });
+
+        const updateEditFormsParent = () => {
+          groups().forEach((group) => {
+            const parentId = group.getAttribute("data-parent-id");
+            if (!parentId) {
+              return;
+            }
+            group.querySelectorAll(".category-sub-row").forEach((row) => {
+              const subId = row.getAttribute("data-sub-id");
+              if (!subId) {
+                return;
+              }
+              const form = document.getElementById("edit-sub-" + subId);
+              if (!form) {
+                return;
+              }
+              const parentInput = form.querySelector("input[name='parentId']");
+              if (parentInput) {
+                parentInput.value = parentId;
+              }
+            });
+          });
+        };
+
+        const buildReorderPayload = () => {
+          const parentsPayload = groups().map((group) => {
+            const parentId = Number(group.getAttribute("data-parent-id"));
+            const subcategoryIds = Array.from(group.querySelectorAll(".category-sub-row"))
+                .map((row) => Number(row.getAttribute("data-sub-id")));
+            return {
+              parentId,
+              subcategoryIds,
+            };
+          });
+          return { parents: parentsPayload };
+        };
+
+        const persistReorder = async () => {
+          if (!csrfToken) {
+            return;
+          }
+          updateEditFormsParent();
+          const payload = buildReorderPayload();
+          try {
+            const response = await fetch(board.dataset.reorderUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                [csrfHeader]: csrfToken,
+              },
+              body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+              window.alert(reorderError);
+              window.location.reload();
+            }
+          } catch (error) {
+            window.alert(reorderError);
+            window.location.reload();
+          }
+        };
+      })();
+    </script>
+  </section>
+</html>
