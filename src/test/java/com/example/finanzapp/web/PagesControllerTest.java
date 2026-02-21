@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.anyOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -136,6 +137,121 @@ class PagesControllerTest {
     mockMvc.perform(get("/categories").with(user("user")))
         .andExpect(status().isOk())
         .andExpect(content().string(containsString("New category")));
+  }
+
+  @Test
+  void categoriesPageShowsUsageLinksForParentAndSubcategory() throws Exception {
+    createUser("categories-usage@example.com");
+    User owner = userRepository.findByEmail("categories-usage@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category subcategory = new Category();
+    subcategory.setUser(owner);
+    subcategory.setParent(parent);
+    subcategory.setName("Sport");
+    subcategory.setSortOrder(0);
+    subcategory = categoryRepository.save(subcategory);
+
+    Transaction tx = new Transaction();
+    tx.setUser(owner);
+    tx.setBookingDateTime(LocalDateTime.of(2026, 2, 5, 9, 0));
+    tx.setPartnerName("Intersport");
+    tx.setPurposeText("Shoe purchase");
+    tx.setAmountCents(-12999L);
+    tx.setCategory(subcategory);
+    transactionRepository.save(tx);
+
+    mockMvc.perform(get("/categories").with(user("categories-usage@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("/transactions?parentCategoryId=" + parent.getId())))
+        .andExpect(content().string(containsString("/transactions?subcategoryId=" + subcategory.getId())));
+  }
+
+  @Test
+  void transactionsPageCanFilterBySubcategoryAndParentCategory() throws Exception {
+    createUser("transactions-category-filter@example.com");
+    User owner = userRepository.findByEmail("transactions-category-filter@example.com").orElseThrow();
+
+    Category shopping = new Category();
+    shopping.setUser(owner);
+    shopping.setName("Shopping");
+    shopping.setSortOrder(0);
+    shopping = categoryRepository.save(shopping);
+
+    Category sport = new Category();
+    sport.setUser(owner);
+    sport.setParent(shopping);
+    sport.setName("Sport");
+    sport.setSortOrder(0);
+    sport = categoryRepository.save(sport);
+
+    Category books = new Category();
+    books.setUser(owner);
+    books.setParent(shopping);
+    books.setName("Books");
+    books.setSortOrder(1);
+    books = categoryRepository.save(books);
+
+    Category mobility = new Category();
+    mobility.setUser(owner);
+    mobility.setName("Mobility");
+    mobility.setSortOrder(1);
+    mobility = categoryRepository.save(mobility);
+
+    Category fuel = new Category();
+    fuel.setUser(owner);
+    fuel.setParent(mobility);
+    fuel.setName("Fuel");
+    fuel.setSortOrder(0);
+    fuel = categoryRepository.save(fuel);
+
+    Transaction sportTx = new Transaction();
+    sportTx.setUser(owner);
+    sportTx.setBookingDateTime(LocalDateTime.of(2026, 2, 6, 9, 0));
+    sportTx.setPartnerName("Sport Shop");
+    sportTx.setPurposeText("Sport");
+    sportTx.setAmountCents(-5000L);
+    sportTx.setCategory(sport);
+    transactionRepository.save(sportTx);
+
+    Transaction booksTx = new Transaction();
+    booksTx.setUser(owner);
+    booksTx.setBookingDateTime(LocalDateTime.of(2026, 2, 7, 9, 0));
+    booksTx.setPartnerName("Book Store");
+    booksTx.setPurposeText("Books");
+    booksTx.setAmountCents(-3000L);
+    booksTx.setCategory(books);
+    transactionRepository.save(booksTx);
+
+    Transaction fuelTx = new Transaction();
+    fuelTx.setUser(owner);
+    fuelTx.setBookingDateTime(LocalDateTime.of(2026, 2, 8, 9, 0));
+    fuelTx.setPartnerName("Fuel Station");
+    fuelTx.setPurposeText("Fuel");
+    fuelTx.setAmountCents(-4500L);
+    fuelTx.setCategory(fuel);
+    transactionRepository.save(fuelTx);
+
+    mockMvc.perform(get("/transactions")
+            .with(user("transactions-category-filter@example.com"))
+            .param("subcategoryId", sport.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Sport Shop")))
+        .andExpect(content().string(not(containsString("Book Store"))))
+        .andExpect(content().string(not(containsString("Fuel Station"))));
+
+    mockMvc.perform(get("/transactions")
+            .with(user("transactions-category-filter@example.com"))
+            .param("parentCategoryId", shopping.getId().toString()))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("Sport Shop")))
+        .andExpect(content().string(containsString("Book Store")))
+        .andExpect(content().string(not(containsString("Fuel Station"))));
   }
 
   @Test

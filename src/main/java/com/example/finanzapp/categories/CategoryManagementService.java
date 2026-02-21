@@ -66,20 +66,18 @@ public class CategoryManagementService {
         continue;
       }
 
-      parentRows.add(new ParentRow(
-          parent.getId(),
-          parent.getName(),
-          parent.isSystem(),
-          parentIndex > 0,
-          parentIndex < (parents.size() - 1)));
       parentOptions.add(new ParentOption(parent.getId(), parent.getName()));
 
       List<Category> children = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), parent);
+      long parentTransactionUsageCount = 0L;
       for (int childIndex = 0; childIndex < children.size(); childIndex++) {
         Category child = children.get(childIndex);
         if (child.getId() == null) {
           continue;
         }
+
+        long childTransactionUsageCount = transactionRepository.countByUserAndCategoryAndDeletedAtIsNull(user.get(), child);
+        parentTransactionUsageCount += childTransactionUsageCount;
 
         subcategoryRows.add(new SubcategoryRow(
             child.getId(),
@@ -89,8 +87,17 @@ public class CategoryManagementService {
             child.isDefault(),
             child.isSystem(),
             childIndex > 0,
-            childIndex < (children.size() - 1)));
+            childIndex < (children.size() - 1),
+            childTransactionUsageCount));
       }
+
+      parentRows.add(new ParentRow(
+          parent.getId(),
+          parent.getName(),
+          parent.isSystem(),
+          parentIndex > 0,
+          parentIndex < (parents.size() - 1),
+          parentTransactionUsageCount));
     }
 
     return new CategoryPageData(
@@ -552,7 +559,8 @@ public class CategoryManagementService {
       String name,
       boolean systemCategory,
       boolean canMoveUp,
-      boolean canMoveDown) {}
+      boolean canMoveDown,
+      long transactionUsageCount) {}
 
   public record SubcategoryRow(
       Integer id,
@@ -562,7 +570,8 @@ public class CategoryManagementService {
       boolean defaultCategory,
       boolean systemCategory,
       boolean canMoveUp,
-      boolean canMoveDown) {}
+      boolean canMoveDown,
+      long transactionUsageCount) {}
 
   public record ParentOption(Integer id, String name) {}
 

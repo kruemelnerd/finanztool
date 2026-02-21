@@ -40,10 +40,17 @@
           <span class="category-name" th:text="${parent.name}">Essen</span>
 
           <div class="category-actions">
-              <button
-                type="button"
-                class="icon-button"
-                th:disabled="${parent.systemCategory}"
+            <a
+              class="category-usage-link"
+              th:href="@{/transactions(parentCategoryId=${parent.id})}"
+              th:title="#{categories.usage.open}"
+              th:text="${parent.transactionUsageCount}">0</a>
+            <span class="subtle" th:text="#{categories.usage.label}">bookings</span>
+
+            <button
+              type="button"
+              class="icon-button"
+              th:disabled="${parent.systemCategory}"
                 th:title="#{categories.edit}"
                 th:attr="data-edit-parent=${parent.id},data-current-name=${parent.name},aria-label=#{categories.edit}">
                 <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true">
@@ -99,6 +106,12 @@
 
             <div class="category-actions">
               <div class="category-badges">
+                <a
+                  class="category-usage-link"
+                  th:href="@{/transactions(subcategoryId=${subcategory.id})}"
+                  th:title="#{categories.usage.open}"
+                  th:text="${subcategory.transactionUsageCount}">0</a>
+                <span class="subtle" th:text="#{categories.usage.label}">bookings</span>
                 <span class="category-chip category-chip-default" th:if="${subcategory.defaultCategory}" th:text="#{categories.badge.default}">Default</span>
                 <span class="category-chip" th:if="${subcategory.systemCategory}" th:text="#{categories.badge.system}">System</span>
               </div>

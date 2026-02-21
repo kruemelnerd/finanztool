@@ -11,7 +11,12 @@
       <span th:text="#{transactions.currentBalance}">Current balance</span>
       <strong th:text="${currentBalanceAmount} ?: #{transactions.noCurrentBalance}">No current balance available</strong>
     </div>
+    <div class="notice" th:if="${categoryFilterLabel}">
+      <span th:text="#{transactions.categoryFilter.active(${categoryFilterLabel})}">Filtered by category</span>
+    </div>
     <form class="filters" action="/transactions" method="get" hx-get="/partials/transactions-table" hx-target="#transactions-table" hx-trigger="submit" hx-swap="outerHTML">
+      <input type="hidden" name="subcategoryId" th:value="${subcategoryId}" />
+      <input type="hidden" name="parentCategoryId" th:value="${parentCategoryId}" />
       <label>
         <span th:text="#{transactions.nameContains}">Name contains</span>
         <input type="text" name="nameContains" th:placeholder="#{transactions.namePlaceholder}" th:value="${nameContains}" />

@@ -7,7 +7,19 @@ public record TransactionPage(
     int page,
     int pageSize,
     int totalPages,
-    long totalItems) {
+    long totalItems,
+    Integer categoryIdFilter,
+    Integer parentCategoryIdFilter,
+    String categoryFilterLabel) {
+  public TransactionPage(
+      List<TransactionRow> rows,
+      int page,
+      int pageSize,
+      int totalPages,
+      long totalItems) {
+    this(rows, page, pageSize, totalPages, totalItems, null, null, null);
+  }
+
   public boolean hasPreviousPage() {
     return page > 0;
   }

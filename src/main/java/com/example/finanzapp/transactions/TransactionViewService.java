@@ -21,7 +21,9 @@ import java.util.List;
 import java.util.Locale;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -69,7 +71,9 @@ public class TransactionViewService {
         maxAmount,
         exactName,
         exactPurpose,
-        false);
+        false,
+        null,
+        null);
     return loaded.transactions().stream()
         .map(tx -> toRow(tx, loaded.locale(), loaded.categoryDisplayById(), loaded.ruleNameById()))
         .toList();
@@ -82,6 +86,8 @@ public class TransactionViewService {
       String nameContains,
       String purposeContains,
       Boolean onlyUncategorized,
+      Integer categoryId,
+      Integer parentCategoryId,
       Integer page,
       Integer pageSize) {
     LoadedTransactions loaded = loadFilteredTransactions(
@@ -90,7 +96,9 @@ public class TransactionViewService {
         maxAmount,
         nameContains,
         purposeContains,
-        onlyUncategorized != null && onlyUncategorized);
+        onlyUncategorized != null && onlyUncategorized,
+        categoryId,
+        parentCategoryId);
 
     int safePageSize = normalizePageSize(pageSize);
     int totalItems = loaded.transactions().size();
@@ -103,7 +111,16 @@ public class TransactionViewService {
         .map(tx -> toRow(tx, loaded.locale(), loaded.categoryDisplayById(), loaded.ruleNameById()))
         .toList();
 
-    return new TransactionPage(rows, safePage, safePageSize, totalPages, totalItems);
+    CategoryFilter categoryFilter = loaded.categoryFilter();
+    return new TransactionPage(
+        rows,
+        safePage,
+        safePageSize,
+        totalPages,
+        totalItems,
+        categoryFilter.categoryId(),
+        categoryFilter.parentCategoryId(),
+        categoryFilter.label());
   }
 
   public List<TransactionRow> loadRecent(UserDetails userDetails, int limit) {
@@ -307,16 +324,19 @@ public class TransactionViewService {
       BigDecimal maxAmount,
       String nameContains,
       String purposeContains,
-      boolean onlyUncategorized) {
+      boolean onlyUncategorized,
+      Integer categoryId,
+      Integer parentCategoryId) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty()) {
-      return new LoadedTransactions(List.of(), Locale.ENGLISH, Map.of(), Map.of());
+      return new LoadedTransactions(List.of(), Locale.ENGLISH, Map.of(), Map.of(), CategoryFilter.empty());
     }
 
     List<Transaction> transactions =
         transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user.get());
     Locale locale = resolveLocale(user.get());
     Map<Integer, CategoryDisplay> categoryDisplayById = buildCategoryDisplayById(user.get());
+    CategoryFilter categoryFilter = resolveCategoryFilter(user.get(), categoryDisplayById, categoryId, parentCategoryId);
 
     if (minAmount != null) {
       long minCents = Math.abs(toCents(minAmount));
@@ -349,8 +369,56 @@ public class TransactionViewService {
           .toList();
     }
 
+    if (categoryFilter.categoryId() != null) {
+      Integer effectiveCategoryId = categoryFilter.categoryId();
+      transactions = transactions.stream()
+          .filter(tx -> tx.getCategory() != null && Objects.equals(tx.getCategory().getId(), effectiveCategoryId))
+          .toList();
+    } else if (categoryFilter.parentCategoryId() != null) {
+      transactions = transactions.stream()
+          .filter(tx -> isInParentCategory(tx, categoryFilter.subcategoryIds()))
+          .toList();
+    }
+
     Map<Integer, String> ruleNameById = loadRuleNameById(user.get(), transactions);
-    return new LoadedTransactions(transactions, locale, categoryDisplayById, ruleNameById);
+    return new LoadedTransactions(transactions, locale, categoryDisplayById, ruleNameById, categoryFilter);
+  }
+
+  private boolean isInParentCategory(Transaction transaction, Set<Integer> subcategoryIds) {
+    if (transaction.getCategory() == null || transaction.getCategory().getId() == null) {
+      return false;
+    }
+    return subcategoryIds.contains(transaction.getCategory().getId());
+  }
+
+  private CategoryFilter resolveCategoryFilter(
+      User user,
+      Map<Integer, CategoryDisplay> categoryDisplayById,
+      Integer categoryId,
+      Integer parentCategoryId) {
+    if (categoryId != null) {
+      Optional<Category> category = categoryRepository.findByIdAndUserAndDeletedAtIsNull(categoryId, user);
+      if (category.isPresent() && category.get().getParent() != null && category.get().getId() != null) {
+        Category current = category.get();
+        CategoryDisplay display = categoryDisplayById.get(current.getId());
+        String label = display == null ? current.getName() : display.label();
+        return new CategoryFilter(current.getId(), null, Set.of(current.getId()), label);
+      }
+    }
+
+    if (parentCategoryId != null) {
+      Optional<Category> parent = categoryRepository.findByIdAndUserAndDeletedAtIsNull(parentCategoryId, user);
+      if (parent.isPresent() && parent.get().getParent() == null && parent.get().getId() != null) {
+        List<Category> subcategories = categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user, parent.get());
+        Set<Integer> subcategoryIds = subcategories.stream()
+            .map(Category::getId)
+            .filter(Objects::nonNull)
+            .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        return new CategoryFilter(null, parent.get().getId(), Set.copyOf(subcategoryIds), parent.get().getName());
+      }
+    }
+
+    return CategoryFilter.empty();
   }
 
   private boolean isDefaultCategory(Transaction transaction, Map<Integer, CategoryDisplay> categoryDisplayById) {
@@ -464,7 +532,18 @@ public class TransactionViewService {
       List<Transaction> transactions,
       Locale locale,
       Map<Integer, CategoryDisplay> categoryDisplayById,
-      Map<Integer, String> ruleNameById) {}
+      Map<Integer, String> ruleNameById,
+      CategoryFilter categoryFilter) {}
+
+  private record CategoryFilter(
+      Integer categoryId,
+      Integer parentCategoryId,
+      Set<Integer> subcategoryIds,
+      String label) {
+    private static CategoryFilter empty() {
+      return new CategoryFilter(null, null, Set.of(), null);
+    }
+  }
 
   private record CategoryDisplay(String label, boolean defaultCategory) {}
 }

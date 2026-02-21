@@ -117,8 +117,8 @@ class TransactionViewServiceTest {
     when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(eq(user)))
         .thenReturn(transactions);
 
-    TransactionPage firstPage = service.loadTransactionsPage(principal, null, null, null, null, false, 0, 10);
-    TransactionPage secondPage = service.loadTransactionsPage(principal, null, null, null, null, false, 1, 10);
+    TransactionPage firstPage = service.loadTransactionsPage(principal, null, null, null, null, false, null, null, 0, 10);
+    TransactionPage secondPage = service.loadTransactionsPage(principal, null, null, null, null, false, null, null, 1, 10);
 
     assertThat(firstPage.totalPages()).isEqualTo(2);
     assertThat(firstPage.totalItems()).isEqualTo(12);
@@ -153,7 +153,7 @@ class TransactionViewServiceTest {
     when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(eq(user)))
         .thenReturn(List.of(defaultTx, manualTx));
 
-    TransactionPage page = service.loadTransactionsPage(principal, null, null, null, null, true, 0, 10);
+    TransactionPage page = service.loadTransactionsPage(principal, null, null, null, null, true, null, null, 0, 10);
 
     assertThat(page.rows()).hasSize(1);
     assertThat(page.rows().get(0).name()).isEqualTo("DEFAULT");

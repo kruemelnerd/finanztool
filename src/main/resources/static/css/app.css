@@ -1039,6 +1039,27 @@ button:disabled {
   gap: 6px;
 }
 
+.category-usage-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.42);
+  background: rgba(219, 234, 254, 0.44);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.category-usage-link:hover,
+.category-usage-link:focus-visible {
+  background: rgba(191, 219, 254, 0.62);
+}
+
 .icon-button {
   padding: 3px 7px;
   border-radius: 9px;
@@ -2061,6 +2082,17 @@ html[data-theme="dark"] .icon-button {
   background: rgba(15, 23, 42, 0.82);
   border-color: rgba(148, 163, 184, 0.4);
   color: #e2e8f0;
+}
+
+html[data-theme="dark"] .category-usage-link {
+  background: rgba(30, 58, 138, 0.34);
+  border-color: rgba(148, 163, 184, 0.4);
+  color: #dbeafe;
+}
+
+html[data-theme="dark"] .category-usage-link:hover,
+html[data-theme="dark"] .category-usage-link:focus-visible {
+  background: rgba(30, 64, 175, 0.5);
 }
 
 html[data-theme="dark"] .icon-button:hover {

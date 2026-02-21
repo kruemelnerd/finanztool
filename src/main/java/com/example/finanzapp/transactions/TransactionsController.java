@@ -38,17 +38,21 @@ public class TransactionsController {
       @RequestParam(name = "nameContains", required = false) String nameContains,
       @RequestParam(name = "purposeContains", required = false) String purposeContains,
       @RequestParam(name = "onlyUncategorized", required = false, defaultValue = "false") boolean onlyUncategorized,
+      @RequestParam(name = "subcategoryId", required = false) Integer subcategoryId,
+      @RequestParam(name = "parentCategoryId", required = false) Integer parentCategoryId,
       @RequestParam(name = "page", required = false) Integer page) {
     model.addAttribute("pageTitle", "page.transactions");
     TransactionPage transactionPage = transactionViewService.loadTransactionsPage(
         userDetails,
         minAmount,
-        maxAmount,
-        nameContains,
-        purposeContains,
-        onlyUncategorized,
-        page,
-        PAGE_SIZE);
+         maxAmount,
+         nameContains,
+         purposeContains,
+         onlyUncategorized,
+         subcategoryId,
+         parentCategoryId,
+         page,
+         PAGE_SIZE);
     model.addAttribute("transactions", transactionPage.rows());
     model.addAttribute("transactionsEmpty", transactionPage.rows().isEmpty());
     model.addAttribute("categoryOptions", transactionViewService.loadCategoryOptions(userDetails));
@@ -58,6 +62,9 @@ public class TransactionsController {
     model.addAttribute("nameContains", nameContains);
     model.addAttribute("purposeContains", purposeContains);
     model.addAttribute("onlyUncategorized", onlyUncategorized);
+    model.addAttribute("subcategoryId", transactionPage.categoryIdFilter());
+    model.addAttribute("parentCategoryId", transactionPage.parentCategoryIdFilter());
+    model.addAttribute("categoryFilterLabel", transactionPage.categoryFilterLabel());
     model.addAttribute("currentBalanceAmount", transactionViewService.loadCurrentBalanceLabel(userDetails));
     return "transactions";
   }
@@ -89,6 +96,8 @@ public class TransactionsController {
       @RequestParam(name = "nameContains", required = false) String nameContains,
       @RequestParam(name = "purposeContains", required = false) String purposeContains,
       @RequestParam(name = "onlyUncategorized", required = false, defaultValue = "false") boolean onlyUncategorized,
+      @RequestParam(name = "subcategoryId", required = false) Integer subcategoryId,
+      @RequestParam(name = "parentCategoryId", required = false) Integer parentCategoryId,
       @RequestParam(name = "page", required = false) Integer page,
       @RequestHeader(name = "HX-Request", required = false) String hxRequest,
       @AuthenticationPrincipal UserDetails userDetails,
@@ -110,6 +119,8 @@ public class TransactionsController {
         .queryParam("nameContains", nameContains)
         .queryParam("purposeContains", purposeContains)
         .queryParam("onlyUncategorized", onlyUncategorized)
+        .queryParam("subcategoryId", subcategoryId)
+        .queryParam("parentCategoryId", parentCategoryId)
         .queryParam("page", page)
         .build()
         .toUriString();
@@ -124,6 +135,8 @@ public class TransactionsController {
         .queryParam("nameContains", nameContains)
         .queryParam("purposeContains", purposeContains)
         .queryParam("onlyUncategorized", onlyUncategorized)
+        .queryParam("subcategoryId", subcategoryId)
+        .queryParam("parentCategoryId", parentCategoryId)
         .queryParam("page", page)
         .build()
         .toUriString();

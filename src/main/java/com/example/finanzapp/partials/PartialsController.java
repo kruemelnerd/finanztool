@@ -96,6 +96,8 @@ public class PartialsController {
       @RequestParam(name = "nameContains", required = false) String nameContains,
       @RequestParam(name = "purposeContains", required = false) String purposeContains,
       @RequestParam(name = "onlyUncategorized", required = false, defaultValue = "false") boolean onlyUncategorized,
+      @RequestParam(name = "subcategoryId", required = false) Integer subcategoryId,
+      @RequestParam(name = "parentCategoryId", required = false) Integer parentCategoryId,
       @RequestParam(name = "page", required = false) Integer page,
       Model model) {
     try {
@@ -106,6 +108,8 @@ public class PartialsController {
           nameContains,
           purposeContains,
           onlyUncategorized,
+          subcategoryId,
+          parentCategoryId,
           page,
           PAGE_SIZE);
       model.addAttribute("transactions", transactionPage.rows());
@@ -118,6 +122,9 @@ public class PartialsController {
       model.addAttribute("hasNextPage", transactionPage.hasNextPage());
       model.addAttribute("previousPage", transactionPage.previousPage());
       model.addAttribute("nextPage", transactionPage.nextPage());
+      model.addAttribute("subcategoryId", transactionPage.categoryIdFilter());
+      model.addAttribute("parentCategoryId", transactionPage.parentCategoryIdFilter());
+      model.addAttribute("categoryFilterLabel", transactionPage.categoryFilterLabel());
       model.addAttribute("partialError", false);
     } catch (RuntimeException ex) {
       model.addAttribute("transactions", List.of());
@@ -131,17 +138,21 @@ public class PartialsController {
       model.addAttribute("nextPage", 0);
       model.addAttribute("partialError", true);
       model.addAttribute("partialErrorMessage", msg("partial.error.generic"));
+      model.addAttribute("subcategoryId", subcategoryId);
+      model.addAttribute("parentCategoryId", parentCategoryId);
       model.addAttribute(
           "partialRetryPath",
           UriComponentsBuilder.fromPath("/partials/transactions-table")
               .queryParam("minAmount", minAmount)
               .queryParam("maxAmount", maxAmount)
-              .queryParam("nameContains", nameContains)
-              .queryParam("purposeContains", purposeContains)
-              .queryParam("onlyUncategorized", onlyUncategorized)
-              .queryParam("page", page)
-              .build()
-              .toUriString());
+               .queryParam("nameContains", nameContains)
+               .queryParam("purposeContains", purposeContains)
+               .queryParam("onlyUncategorized", onlyUncategorized)
+               .queryParam("subcategoryId", subcategoryId)
+               .queryParam("parentCategoryId", parentCategoryId)
+               .queryParam("page", page)
+               .build()
+               .toUriString());
     }
     model.addAttribute("minAmount", minAmount);
     model.addAttribute("maxAmount", maxAmount);
