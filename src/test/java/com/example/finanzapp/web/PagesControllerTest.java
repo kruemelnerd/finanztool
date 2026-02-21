@@ -173,6 +173,164 @@ class PagesControllerTest {
   }
 
   @Test
+  void categoriesPageShowsRuleButtonAndIndicatorState() throws Exception {
+    createUser("categories-rules-view@example.com");
+    User owner = userRepository.findByEmail("categories-rules-view@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category activeSub = new Category();
+    activeSub.setUser(owner);
+    activeSub.setParent(parent);
+    activeSub.setName("ActiveRuleSub");
+    activeSub.setSortOrder(0);
+    activeSub = categoryRepository.save(activeSub);
+
+    Category inactiveSub = new Category();
+    inactiveSub.setUser(owner);
+    inactiveSub.setParent(parent);
+    inactiveSub.setName("InactiveRuleSub");
+    inactiveSub.setSortOrder(1);
+    inactiveSub = categoryRepository.save(inactiveSub);
+
+    Rule activeRule = new Rule();
+    activeRule.setUser(owner);
+    activeRule.setName("Active Rule");
+    activeRule.setMatchText("active");
+    activeRule.setMatchField(RuleMatchField.BOTH);
+    activeRule.setCategory(activeSub);
+    activeRule.setActive(true);
+    activeRule.setSortOrder(0);
+    ruleRepository.save(activeRule);
+
+    Rule inactiveRule = new Rule();
+    inactiveRule.setUser(owner);
+    inactiveRule.setName("Inactive Rule");
+    inactiveRule.setMatchText("inactive");
+    inactiveRule.setMatchField(RuleMatchField.BOTH);
+    inactiveRule.setCategory(inactiveSub);
+    inactiveRule.setActive(false);
+    inactiveRule.setSortOrder(1);
+    ruleRepository.save(inactiveRule);
+
+    mockMvc.perform(get("/categories").with(user("categories-rules-view@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(content().string(containsString("data-rule-open=\"" + activeSub.getId() + "\"")))
+        .andExpect(content().string(containsString("data-rule-open=\"" + inactiveSub.getId() + "\"")))
+        .andExpect(content().string(containsString("category-rule-button-active")))
+        .andExpect(content().string(containsString("category-rule-button-inactive")));
+  }
+
+  @Test
+  void upsertSubcategoryRuleFromCategoriesPageCreatesAndUpdatesRules() throws Exception {
+    createUser("categories-rules-upsert@example.com");
+    User owner = userRepository.findByEmail("categories-rules-upsert@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Food");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("FastFood");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    mockMvc.perform(post("/categories/subcategories/" + sub.getId() + "/rule")
+            .with(user("categories-rules-upsert@example.com"))
+            .with(csrf())
+            .param("fragmentsText", "burger king\nmcdonalds")
+            .param("active", "false"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    java.util.List<Rule> createdRules =
+        ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, sub.getId());
+    org.assertj.core.api.Assertions.assertThat(createdRules).hasSize(2);
+    org.assertj.core.api.Assertions.assertThat(createdRules)
+        .extracting(Rule::getMatchText)
+        .containsExactly("burger king", "mcdonalds");
+    org.assertj.core.api.Assertions.assertThat(createdRules).allMatch(rule -> !rule.isActive());
+
+    mockMvc.perform(post("/categories/subcategories/" + sub.getId() + "/rule")
+            .with(user("categories-rules-upsert@example.com"))
+            .with(csrf())
+            .param("fragmentsText", "pizza hut\nsubway")
+            .param("active", "true"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    java.util.List<Rule> updatedRules =
+        ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, sub.getId());
+    org.assertj.core.api.Assertions.assertThat(updatedRules).hasSize(2);
+    org.assertj.core.api.Assertions.assertThat(updatedRules)
+        .extracting(Rule::getMatchText)
+        .containsExactly("pizza hut", "subway");
+    org.assertj.core.api.Assertions.assertThat(updatedRules).allMatch(Rule::isActive);
+  }
+
+  @Test
+  void deleteSubcategoryRuleFromCategoriesPageSoftDeletesRules() throws Exception {
+    createUser("categories-rules-delete@example.com");
+    User owner = userRepository.findByEmail("categories-rules-delete@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Food");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Takeaway");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Rule first = new Rule();
+    first.setUser(owner);
+    first.setName("Rule One");
+    first.setMatchText("first");
+    first.setMatchField(RuleMatchField.BOTH);
+    first.setCategory(sub);
+    first.setSortOrder(0);
+    first = ruleRepository.save(first);
+
+    Rule second = new Rule();
+    second.setUser(owner);
+    second.setName("Rule Two");
+    second.setMatchText("second");
+    second.setMatchField(RuleMatchField.BOTH);
+    second.setCategory(sub);
+    second.setSortOrder(1);
+    second = ruleRepository.save(second);
+
+    mockMvc.perform(post("/categories/subcategories/" + sub.getId() + "/rule/delete")
+            .with(user("categories-rules-delete@example.com"))
+            .with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    org.assertj.core.api.Assertions.assertThat(
+        ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, sub.getId()))
+        .isEmpty();
+    org.assertj.core.api.Assertions.assertThat(ruleRepository.findById(first.getId()).orElseThrow().getDeletedAt())
+        .isNotNull();
+    org.assertj.core.api.Assertions.assertThat(ruleRepository.findById(second.getId()).orElseThrow().getDeletedAt())
+        .isNotNull();
+  }
+
+  @Test
   void transactionsPageCanFilterBySubcategoryAndParentCategory() throws Exception {
     createUser("transactions-category-filter@example.com");
     User owner = userRepository.findByEmail("transactions-category-filter@example.com").orElseThrow();

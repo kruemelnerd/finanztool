@@ -30,7 +30,10 @@
         data-prompt-edit-parent=#{categories.prompt.editParent},
         data-prompt-edit-sub=#{categories.prompt.editSubcategory},
         data-confirm-delete-parent=#{confirm.deleteParentCategory},
-        data-confirm-delete-sub=#{confirm.deleteSubcategory}">
+        data-confirm-delete-sub=#{confirm.deleteSubcategory},
+        data-confirm-delete-rule=#{confirm.deleteRule},
+        data-rule-title-prefix=#{categories.rule.modal.titlePrefix},
+        data-rule-fragments-required=#{categories.rule.error.fragmentsRequired}">
 
       <div class="empty-state" th:if="${#lists.isEmpty(parents)}" th:text="#{categories.empty}">No categories configured yet.</div>
 
@@ -102,7 +105,9 @@
         <div class="category-sub-list" th:attr="data-sub-list=${parent.id}">
           <div class="category-sub-row" draggable="true" th:each="subcategory : ${subcategories}" th:if="${subcategory.parentId == parent.id}" th:attr="data-sub-id=${subcategory.id}">
             <span class="drag-handle" aria-hidden="true">::</span>
-            <span class="category-name" th:text="${subcategory.name}">FastFood</span>
+            <div class="category-name-wrap">
+              <span class="category-name" th:text="${subcategory.name}">FastFood</span>
+            </div>
 
             <div class="category-actions">
               <div class="category-badges">
@@ -148,6 +153,21 @@
                   </svg>
                 </button>
               </form>
+
+              <button
+                type="button"
+                class="button-link category-rule-button"
+                th:classappend="${subcategory.hasRule} ? (${subcategory.ruleActive} ? ' category-rule-button-active' : ' category-rule-button-inactive') : ' category-rule-button-none'"
+                th:attr="
+                  data-rule-open=${subcategory.id},
+                  data-rule-name=${subcategory.name},
+                  data-rule-active=${subcategory.ruleActive},
+                  data-rule-has-rule=${subcategory.hasRule},
+                  aria-label=#{categories.rule.button}"
+                th:title="${subcategory.hasRule} ? (${subcategory.ruleActive} ? #{categories.rule.status.active} : #{categories.rule.status.inactive}) : #{categories.rule.status.none}">
+                <span class="category-rule-button-indicator" aria-hidden="true"></span>
+                <span th:text="#{categories.rule.button}">Rule</span>
+              </button>
             </div>
 
             <form th:action="@{'/categories/subcategories/' + ${subcategory.id}}" method="post" class="categories-hidden-form" th:attr="id=${'edit-sub-' + subcategory.id}">
@@ -155,6 +175,48 @@
               <input type="hidden" name="parentId" th:value="${subcategory.parentId}" />
               <input type="hidden" name="name" th:value="${subcategory.name}" />
             </form>
+
+            <form th:action="@{'/categories/subcategories/' + ${subcategory.id} + '/rule'}" method="post" class="categories-hidden-form" th:attr="id=${'rule-sub-' + subcategory.id}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+              <input type="hidden" name="fragmentsText" value="" />
+              <input type="hidden" name="active" value="false" />
+            </form>
+
+            <form th:action="@{'/categories/subcategories/' + ${subcategory.id} + '/rule/delete'}" method="post" class="categories-hidden-form" th:attr="id=${'rule-delete-sub-' + subcategory.id}">
+              <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+            </form>
+
+            <textarea class="categories-hidden-rule-fragments" th:attr="id=${'rule-fragments-' + subcategory.id}" hidden th:text="${subcategory.ruleFragmentsText}"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" id="categories-rule-modal" hidden>
+      <div class="modal-card categories-rule-modal-card" role="dialog" aria-modal="true" aria-labelledby="categories-rule-modal-title">
+        <div class="categories-rule-modal-head">
+          <div class="modal-title" id="categories-rule-modal-title">Rule details</div>
+          <button type="button" class="icon-button categories-rule-modal-close" id="categories-rule-close" th:attr="aria-label=#{categories.rule.modal.close}">x</button>
+        </div>
+
+        <div class="categories-rule-modal-row">
+          <label class="categories-rule-toggle" for="categories-rule-active">
+            <input type="checkbox" id="categories-rule-active" />
+            <span th:text="#{categories.rule.modal.active}">Active</span>
+          </label>
+        </div>
+
+        <label>
+          <span th:text="#{categories.rule.modal.fragments}">Text fragments</span>
+          <textarea id="categories-rule-fragments" rows="7"></textarea>
+        </label>
+        <div class="hint" th:text="#{categories.rule.modal.fragmentsHint}">One fragment per line.</div>
+
+        <div class="categories-rule-modal-actions">
+          <button type="button" class="button-link" id="categories-rule-delete" th:text="#{categories.rule.modal.delete}">Delete</button>
+          <div class="categories-rule-modal-actions-main">
+            <button type="button" class="button-link" id="categories-rule-cancel" th:text="#{categories.rule.modal.cancel}">Cancel</button>
+            <button type="button" id="categories-rule-save" th:text="#{categories.rule.modal.save}">Save</button>
           </div>
         </div>
       </div>
@@ -172,8 +234,127 @@
         const promptEditParent = board.dataset.promptEditParent || "Edit category";
         const promptEditSub = board.dataset.promptEditSub || "Edit subcategory";
         const reorderError = board.dataset.reorderError || "Could not reorder categories.";
+        const confirmDeleteRule = board.dataset.confirmDeleteRule || "Delete this rule?";
+        const ruleTitlePrefix = board.dataset.ruleTitlePrefix || "Rules for";
+        const ruleFragmentsRequired = board.dataset.ruleFragmentsRequired || "Please enter at least one fragment.";
         const csrfToken = board.dataset.csrfToken;
         const csrfHeader = board.dataset.csrfHeader || "X-CSRF-TOKEN";
+
+        const ruleModal = document.getElementById("categories-rule-modal");
+        const ruleModalTitle = document.getElementById("categories-rule-modal-title");
+        const ruleModalFragments = document.getElementById("categories-rule-fragments");
+        const ruleModalActive = document.getElementById("categories-rule-active");
+        const ruleModalDelete = document.getElementById("categories-rule-delete");
+        const ruleModalSave = document.getElementById("categories-rule-save");
+        const ruleModalCancel = document.getElementById("categories-rule-cancel");
+        const ruleModalClose = document.getElementById("categories-rule-close");
+        let selectedRuleSubId = null;
+
+        const closeRuleModal = () => {
+          if (!ruleModal) {
+            return;
+          }
+          ruleModal.setAttribute("hidden", "hidden");
+          selectedRuleSubId = null;
+        };
+
+        const openRuleModal = (button) => {
+          if (!ruleModal || !ruleModalFragments || !ruleModalActive || !ruleModalTitle) {
+            return;
+          }
+          const subId = button.getAttribute("data-rule-open");
+          if (!subId) {
+            return;
+          }
+
+          selectedRuleSubId = subId;
+          const subName = button.getAttribute("data-rule-name") || "";
+          const hasRule = button.getAttribute("data-rule-has-rule") === "true";
+          const isActive = button.getAttribute("data-rule-active") === "true";
+          const fragments = document.getElementById("rule-fragments-" + subId);
+
+          ruleModalTitle.textContent = ruleTitlePrefix + " " + subName;
+          ruleModalActive.checked = hasRule ? isActive : true;
+          ruleModalFragments.value = fragments ? fragments.value : "";
+
+          if (ruleModalDelete) {
+            ruleModalDelete.disabled = !hasRule;
+          }
+
+          ruleModal.removeAttribute("hidden");
+          ruleModalFragments.focus();
+        };
+
+        if (ruleModal) {
+          ruleModal.addEventListener("click", (event) => {
+            if (event.target === ruleModal) {
+              closeRuleModal();
+            }
+          });
+        }
+        if (ruleModalCancel) {
+          ruleModalCancel.addEventListener("click", () => {
+            closeRuleModal();
+          });
+        }
+        if (ruleModalClose) {
+          ruleModalClose.addEventListener("click", () => {
+            closeRuleModal();
+          });
+        }
+
+        board.querySelectorAll("[data-rule-open]").forEach((button) => {
+          button.addEventListener("click", () => {
+            openRuleModal(button);
+          });
+        });
+
+        if (ruleModalSave) {
+          ruleModalSave.addEventListener("click", () => {
+            if (!selectedRuleSubId || !ruleModalFragments || !ruleModalActive) {
+              return;
+            }
+            const normalized = ruleModalFragments.value.trim();
+            if (!normalized) {
+              window.alert(ruleFragmentsRequired);
+              return;
+            }
+            const form = document.getElementById("rule-sub-" + selectedRuleSubId);
+            if (!form) {
+              return;
+            }
+            const fragmentsInput = form.querySelector("input[name='fragmentsText']");
+            const activeInput = form.querySelector("input[name='active']");
+            if (!fragmentsInput || !activeInput) {
+              return;
+            }
+            fragmentsInput.value = ruleModalFragments.value;
+            activeInput.value = ruleModalActive.checked ? "true" : "false";
+            form.submit();
+          });
+        }
+
+        if (ruleModalDelete) {
+          ruleModalDelete.addEventListener("click", () => {
+            if (!selectedRuleSubId || ruleModalDelete.disabled) {
+              return;
+            }
+            if (!window.confirm(confirmDeleteRule)) {
+              return;
+            }
+            const form = document.getElementById("rule-delete-sub-" + selectedRuleSubId);
+            if (!form) {
+              return;
+            }
+            form.submit();
+          });
+        }
+
+        document.addEventListener("keydown", (event) => {
+          if (event.key === "Escape" && ruleModal && !ruleModal.hasAttribute("hidden")) {
+            closeRuleModal();
+          }
+        });
 
         const createParentButton = document.getElementById("categories-create-parent-button");
         const createParentForm = document.getElementById("categories-create-parent-form");
