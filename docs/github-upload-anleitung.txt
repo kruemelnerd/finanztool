@@ -1,0 +1,120 @@
+GitHub Upload Anleitung (Feature-Branch + PR)
+
+Empfohlen (inkl. aktueller Aenderungen, ohne .opencode-Skilldateien):
+
+git checkout -b feature/review-skill-and-categories
+
+git add .gitignore AGENTS.md docs/project-todo-status.md pom.xml \
+src/main/java/com/example/finanzapp/auth/AuthController.java \
+src/main/java/com/example/finanzapp/categories/CategoriesController.java \
+src/main/java/com/example/finanzapp/categories/CategoryManagementService.java \
+src/main/java/com/example/finanzapp/categories/CategoryTransferService.java \
+src/main/java/com/example/finanzapp/reports/SankeyReportService.java \
+src/main/java/com/example/finanzapp/rules/RuleManagementService.java \
+src/main/java/com/example/finanzapp/rules/RuleTransferService.java \
+src/main/java/com/example/finanzapp/rules/RulesController.java \
+src/main/resources/messages.properties \
+src/main/resources/messages_de.properties \
+src/main/resources/messages_en.properties \
+src/main/resources/static/css/app.css \
+src/main/resources/templates/categories.html \
+src/main/resources/templates/layouts/base.html \
+src/main/resources/templates/partials/transactions-table.html \
+src/main/resources/templates/reports-sankey.html \
+src/main/resources/templates/rules.html \
+src/test/java/com/example/finanzapp/cucumber/UiSteps.java \
+src/test/java/com/example/finanzapp/e2e/PlaywrightE2ETest.java \
+src/test/java/com/example/finanzapp/web/PagesControllerTest.java \
+examples/Skribble_categories.png \
+examples/Skribble_categories_with_rules.png \
+examples/sankey_example.png
+
+git diff --cached --name-only
+
+mvn -DskipTests compile
+mvn -Dtest=CsvParserTest,CsvImportServiceTest,TransactionViewServiceTest test
+
+git commit -m "Refine category and rules flows and update UI, i18n, and tests"
+
+gh auth login
+gh repo create finanztool --private --source=. --remote=origin
+
+git push -u origin feature/review-skill-and-categories
+gh pr create --base main --head feature/review-skill-and-categories --fill
+
+Optional: Wenn der neue Skill unter .opencode auch mit auf GitHub soll (trotz Ignore):
+
+git add -f .opencode/skills/code-review-commit-push-guard/SKILL.md \
+.opencode/skills/code-review-commit-push-guard/scripts/review_bundle.py \
+.opencode/skills/code-review-commit-push-guard/scripts/sync_commit_push.py \
+.opencode/skills/code-review-commit-push-guard/templates/REVIEW_BUNDLE_TEMPLATE.md \
+.opencode/skills/code-review-commit-push-guard/templates/CHANGELOG_TEMPLATE.md \
+.opencode/skills/code-review-commit-push-guard/templates/APPROVAL_TEMPLATE.md
+
+---
+
+Default-Branch auf main setzen
+
+Fall 1: main existiert bereits
+
+# Optional pruefen
+git branch -a
+gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
+
+# Default-Branch auf GitHub auf main setzen
+gh repo edit --default-branch main
+
+# Optional lokal auf main wechseln + Upstream setzen
+git checkout main
+git branch --set-upstream-to=origin/main main
+
+Fall 2: Es gibt nur master und soll auf main umgestellt werden
+
+# Lokalen Branch umbenennen
+git checkout master
+git branch -m master main
+
+# Nach GitHub pushen
+git push -u origin main
+
+# Default-Branch auf GitHub auf main setzen
+gh repo edit --default-branch main
+
+# Optional alten master auf Remote loeschen
+git push origin --delete master
+
+---
+
+Fehlerbehebung: "origin/main existiert nicht"
+
+Wenn bei `git branch --set-upstream-to=origin/main main` der Fehler kommt,
+existiert der Branch `main` auf Remote noch nicht. Dann so vorgehen:
+
+# 1) Optional: aktuelle Aenderungen committen
+git add -A
+git commit -m "Prepare main branch"
+
+# 2) Falsches Upstream-Tracking loesen (falls gesetzt)
+git branch --unset-upstream
+
+# 3) main auf Remote anlegen und Upstream korrekt setzen
+git push -u origin main
+
+# 4) Default-Branch in GitHub auf main setzen
+gh repo edit --default-branch main
+
+# 5) Remote-Referenzen aktualisieren
+git fetch origin
+git remote set-head origin -a
+
+# 6) Verifizieren
+git branch -vv
+git remote show origin
+
+Optional aufraeumen:
+
+# Alten Feature-Branch remote loeschen (nur wenn sicher)
+git push origin --delete feature/review-skill-and-categories
+
+# Lokalen master loeschen (nur wenn nicht mehr benoetigt)
+git branch -d master
