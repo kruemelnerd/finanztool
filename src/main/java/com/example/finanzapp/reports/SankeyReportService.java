@@ -52,13 +52,15 @@ public class SankeyReportService {
   public SankeyReportData buildReport(UserDetails userDetails, int year) {
     Optional<User> user = resolveUser(userDetails);
     if (user.isEmpty()) {
-      return new SankeyReportData(year, List.of(baseIncomeNode(), baseExpenseNode()), List.of());
+      return new SankeyReportData(year, List.of(centerNode()), List.of());
     }
 
     List<Transaction> transactions = transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user.get());
 
-    Map<LinkKey, Long> sumsByLink = new LinkedHashMap<>();
-    Map<Integer, String> categoryLabels = new LinkedHashMap<>();
+    Map<Integer, Long> incomeByCategory = new LinkedHashMap<>();
+    Map<Integer, Long> expenseByCategory = new LinkedHashMap<>();
+    Map<Integer, String> incomeCategoryLabels = new LinkedHashMap<>();
+    Map<Integer, String> expenseCategoryLabels = new LinkedHashMap<>();
 
     for (Transaction transaction : transactions) {
       if (transaction.getBookingDateTime() == null || transaction.getBookingDateTime().getYear() != year) {
@@ -76,32 +78,46 @@ public class SankeyReportService {
         continue;
       }
 
-      String source = transaction.getAmountCents() >= 0 ? "income" : "expense";
       Integer categoryId = transaction.getCategory().getId();
       String categoryLabel = transaction.getCategory().getParent().getName() + " -> " + transaction.getCategory().getName();
 
-      categoryLabels.put(categoryId, categoryLabel);
-      LinkKey key = new LinkKey(source, categoryId);
-      sumsByLink.put(key, sumsByLink.getOrDefault(key, 0L) + amountCents);
+      if (transaction.getAmountCents() > 0) {
+        incomeCategoryLabels.put(categoryId, categoryLabel);
+        incomeByCategory.put(categoryId, incomeByCategory.getOrDefault(categoryId, 0L) + amountCents);
+        continue;
+      }
+
+      if (transaction.getAmountCents() < 0) {
+        expenseCategoryLabels.put(categoryId, categoryLabel);
+        expenseByCategory.put(categoryId, expenseByCategory.getOrDefault(categoryId, 0L) + amountCents);
+      }
     }
 
     List<SankeyNode> nodes = new ArrayList<>();
-    nodes.add(baseIncomeNode());
-    nodes.add(baseExpenseNode());
+    nodes.add(centerNode());
 
-    categoryLabels.entrySet().stream()
+    incomeCategoryLabels.entrySet().stream()
         .sorted(Map.Entry.comparingByValue())
-        .forEach(entry -> nodes.add(new SankeyNode(categoryNodeId(entry.getKey()), entry.getValue())));
+        .forEach(entry -> nodes.add(new SankeyNode(incomeCategoryNodeId(entry.getKey()), entry.getValue())));
 
-    List<SankeyLink> links = sumsByLink.entrySet().stream()
-        .sorted(Comparator
-            .comparing((Map.Entry<LinkKey, Long> entry) -> entry.getKey().source())
-            .thenComparing(entry -> categoryLabels.get(entry.getKey().categoryId())))
-        .map(entry -> new SankeyLink(
-            entry.getKey().source(),
-            categoryNodeId(entry.getKey().categoryId()),
-            entry.getValue()))
-        .toList();
+    expenseCategoryLabels.entrySet().stream()
+        .sorted(Map.Entry.comparingByValue())
+        .forEach(entry -> nodes.add(new SankeyNode(expenseCategoryNodeId(entry.getKey()), entry.getValue())));
+
+    List<SankeyLink> links = new ArrayList<>();
+    incomeByCategory.entrySet().stream()
+        .sorted(Comparator.comparing(entry -> incomeCategoryLabels.get(entry.getKey())))
+        .forEach(entry -> links.add(new SankeyLink(
+            incomeCategoryNodeId(entry.getKey()),
+            "center",
+            entry.getValue())));
+
+    expenseByCategory.entrySet().stream()
+        .sorted(Comparator.comparing(entry -> expenseCategoryLabels.get(entry.getKey())))
+        .forEach(entry -> links.add(new SankeyLink(
+            "center",
+            expenseCategoryNodeId(entry.getKey()),
+            entry.getValue())));
 
     return new SankeyReportData(year, List.copyOf(nodes), links);
   }
@@ -110,16 +126,16 @@ public class SankeyReportService {
     return LocalDate.now().getYear() - 1;
   }
 
-  private SankeyNode baseIncomeNode() {
-    return new SankeyNode("income", "Income");
+  private SankeyNode centerNode() {
+    return new SankeyNode("center", "Center");
   }
 
-  private SankeyNode baseExpenseNode() {
-    return new SankeyNode("expense", "Expense");
+  private String incomeCategoryNodeId(Integer categoryId) {
+    return "income-cat-" + categoryId;
   }
 
-  private String categoryNodeId(Integer categoryId) {
-    return "cat-" + categoryId;
+  private String expenseCategoryNodeId(Integer categoryId) {
+    return "expense-cat-" + categoryId;
   }
 
   private Optional<User> resolveUser(UserDetails userDetails) {
@@ -128,8 +144,6 @@ public class SankeyReportService {
     }
     return userRepository.findByEmail(userDetails.getUsername());
   }
-
-  private record LinkKey(String source, Integer categoryId) {}
 
   public record SankeyReportData(int year, List<SankeyNode> nodes, List<SankeyLink> links) {}
 

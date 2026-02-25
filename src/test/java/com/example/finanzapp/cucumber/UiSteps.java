@@ -153,6 +153,7 @@ public class UiSteps {
   @When("I delete the transaction with amount {string}")
   public void iDeleteTheTransactionWithAmount(String amount) {
     boolean expectSubmit = nextDialogAction == DialogAction.ACCEPT;
+    page.locator("#transactions-table tr:has-text('" + amount + "') summary.row-menu-trigger").click();
     page.locator("#transactions-table tr:has-text('" + amount + "') button:has-text('Delete')").click();
     if (expectSubmit) {
       page.waitForURL(baseUrl() + "/transactions");

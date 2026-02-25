@@ -17,6 +17,22 @@
       <span class="subtle" th:text="#{categories.dragHint}">Drag and drop categories to reorder.</span>
     </div>
 
+    <div class="categories-transfer">
+      <div class="categories-transfer-actions">
+        <a class="button-link" th:href="@{/categories/export}" th:text="#{categories.export.json}">Export categories (JSON)</a>
+      </div>
+
+      <form class="categories-import-form" th:action="@{/categories/import}" method="post" enctype="multipart/form-data">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+        <label>
+          <span th:text="#{categories.import.file}">JSON file</span>
+          <input type="file" name="file" accept="application/json,.json" required />
+        </label>
+        <button type="submit" th:text="#{categories.import.submit}">Import categories</button>
+      </form>
+      <p class="subtle" th:text="#{categories.import.hint}">Import adds missing parent and subcategories without deleting existing entries.</p>
+    </div>
+
     <div
       class="categories-board"
       id="categories-board"
@@ -201,8 +217,11 @@
 
         <div class="categories-rule-modal-row">
           <label class="categories-rule-toggle" for="categories-rule-active">
-            <input type="checkbox" id="categories-rule-active" />
-            <span th:text="#{categories.rule.modal.active}">Active</span>
+            <span class="categories-rule-toggle-control">
+              <input type="checkbox" id="categories-rule-active" />
+              <span class="categories-rule-slider" aria-hidden="true"></span>
+            </span>
+            <span class="categories-rule-toggle-label" th:text="#{categories.rule.modal.active}">Active</span>
           </label>
         </div>
 
@@ -213,7 +232,7 @@
         <div class="hint" th:text="#{categories.rule.modal.fragmentsHint}">One fragment per line.</div>
 
         <div class="categories-rule-modal-actions">
-          <button type="button" class="button-link" id="categories-rule-delete" th:text="#{categories.rule.modal.delete}">Delete</button>
+          <button type="button" class="button-link button-link-danger" id="categories-rule-delete" th:text="#{categories.rule.modal.delete}">Delete</button>
           <div class="categories-rule-modal-actions-main">
             <button type="button" class="button-link" id="categories-rule-cancel" th:text="#{categories.rule.modal.cancel}">Cancel</button>
             <button type="button" id="categories-rule-save" th:text="#{categories.rule.modal.save}">Save</button>

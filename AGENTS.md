@@ -132,6 +132,11 @@ All commands below assume current directory is repository root.
 - Keep UI text in message bundles: `messages.properties`, `messages_de.properties`, `messages_en.properties`.
 - Prefer message keys over hardcoded user-facing strings in templates/controllers.
 
+## UI/UX review workflow
+- For UI/UX changes, run the `ui-ux-pro-max` skill (`--design-system` plus at least one focused UX query).
+- Apply the generated checklist to validate contrast, focus visibility, hover feedback, and responsive behavior.
+- Avoid emoji icons; use SVG-based icons consistently.
+
 ## Testing conventions
 - Default stack: JUnit 5 + AssertJ.
 - Web integration tests use `@SpringBootTest` + `@AutoConfigureMockMvc`.
@@ -148,3 +153,4 @@ All commands below assume current directory is repository root.
 - Add or update tests for behavior changes.
 - Run targeted tests first, then broader suites for higher-risk changes.
 - Update docs and message keys when behavior or UI text changes.
+- If the user asks for "next steps", scan project `.md` files for open TODOs first and use those as the primary basis for the response (especially `docs/project-todo-status.md` when present).

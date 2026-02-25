@@ -1,6 +1,7 @@
 package com.example.finanzapp.categories;
 
 import com.example.finanzapp.domain.Category;
+import com.example.finanzapp.domain.Rule;
 import com.example.finanzapp.domain.User;
 import com.example.finanzapp.repository.CategoryRepository;
 import com.example.finanzapp.repository.RuleRepository;
@@ -16,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
@@ -59,6 +61,13 @@ public class CategoryManagementService {
     List<ParentRow> parentRows = new ArrayList<>();
     List<SubcategoryRow> subcategoryRows = new ArrayList<>();
     List<ParentOption> parentOptions = new ArrayList<>();
+    Map<Integer, List<Rule>> rulesByCategoryId = new HashMap<>();
+    for (Rule rule : ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get())) {
+      if (rule.getCategory() == null || rule.getCategory().getId() == null) {
+        continue;
+      }
+      rulesByCategoryId.computeIfAbsent(rule.getCategory().getId(), key -> new ArrayList<>()).add(rule);
+    }
 
     for (int parentIndex = 0; parentIndex < parents.size(); parentIndex++) {
       Category parent = parents.get(parentIndex);
@@ -78,6 +87,13 @@ public class CategoryManagementService {
 
         long childTransactionUsageCount = transactionRepository.countByUserAndCategoryAndDeletedAtIsNull(user.get(), child);
         parentTransactionUsageCount += childTransactionUsageCount;
+        List<Rule> rules = rulesByCategoryId.getOrDefault(child.getId(), List.of());
+        boolean hasRule = !rules.isEmpty();
+        boolean ruleActive = hasRule && rules.stream().allMatch(Rule::isActive);
+        String ruleFragmentsText = rules.stream()
+            .map(Rule::getMatchText)
+            .filter(value -> value != null && !value.isBlank())
+            .collect(Collectors.joining("\n"));
 
         subcategoryRows.add(new SubcategoryRow(
             child.getId(),
@@ -88,7 +104,10 @@ public class CategoryManagementService {
             child.isSystem(),
             childIndex > 0,
             childIndex < (children.size() - 1),
-            childTransactionUsageCount));
+            childTransactionUsageCount,
+            hasRule,
+            ruleActive,
+            ruleFragmentsText));
       }
 
       parentRows.add(new ParentRow(
@@ -571,7 +590,10 @@ public class CategoryManagementService {
       boolean systemCategory,
       boolean canMoveUp,
       boolean canMoveDown,
-      long transactionUsageCount) {}
+      long transactionUsageCount,
+      boolean hasRule,
+      boolean ruleActive,
+      String ruleFragmentsText) {}
 
   public record ParentOption(Integer id, String name) {}
 

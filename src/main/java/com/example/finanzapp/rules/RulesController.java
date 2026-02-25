@@ -1,97 +1,49 @@
 package com.example.finanzapp.rules;
 
-import java.util.List;
 import java.util.Optional;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class RulesController {
   private final RuleManagementService ruleManagementService;
+  private final RuleTransferService ruleTransferService;
   private final MessageSource messageSource;
 
   public RulesController(
       RuleManagementService ruleManagementService,
+      RuleTransferService ruleTransferService,
       MessageSource messageSource) {
     this.ruleManagementService = ruleManagementService;
+    this.ruleTransferService = ruleTransferService;
     this.messageSource = messageSource;
   }
 
   @GetMapping("/rules")
-  public String rules(
-      Model model,
-      @AuthenticationPrincipal UserDetails userDetails) {
-    model.addAttribute("pageTitle", "page.rules");
-    model.addAttribute("rules", ruleManagementService.loadRules(userDetails));
-    return "rules";
+  public String rules() {
+    return "redirect:/categories";
   }
 
   @GetMapping("/rules/new")
-  public String newRule(
-      @RequestParam(name = "categoryId", required = false) Integer categoryId,
-      Model model,
-      @AuthenticationPrincipal UserDetails userDetails,
-      RedirectAttributes redirectAttributes) {
-    List<RuleManagementService.RuleCategoryOption> options = ruleManagementService.loadCategoryOptions(userDetails);
-    if (options.isEmpty()) {
-      redirectAttributes.addFlashAttribute("rulesStatus", "error");
-      redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.generic"));
-      return "redirect:/rules";
-    }
-
-    if (categoryId == null) {
-      model.addAttribute("pageTitle", "page.rules");
-      model.addAttribute("categoryOptions", options);
-      return "rule-category-select";
-    }
-
-    Optional<String> label = options.stream()
-        .filter(option -> option.id().equals(categoryId))
-        .map(RuleManagementService.RuleCategoryOption::label)
-        .findFirst();
-    if (label.isEmpty()) {
-      redirectAttributes.addFlashAttribute("rulesStatus", "error");
-      redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.validation"));
-      return "redirect:/rules/new";
-    }
-
-    model.addAttribute("pageTitle", "page.rules");
-    model.addAttribute("editMode", false);
-    model.addAttribute("categoryId", categoryId);
-    model.addAttribute("categoryLabel", label.get());
-    model.addAttribute("fragmentsText", "");
-    return "rule-fragments-form";
+  public String newRulePage() {
+    return "redirect:/categories";
   }
 
   @GetMapping("/rules/{categoryId}/edit")
-  public String editRuleGroup(
-      @PathVariable("categoryId") Integer categoryId,
-      Model model,
-      @AuthenticationPrincipal UserDetails userDetails,
-      RedirectAttributes redirectAttributes) {
-    Optional<RuleManagementService.RuleGroupFormData> formData =
-        ruleManagementService.loadRuleGroupFormData(userDetails, categoryId);
-    if (formData.isEmpty()) {
-      redirectAttributes.addFlashAttribute("rulesStatus", "error");
-      redirectAttributes.addFlashAttribute("rulesMessage", msg("rules.error.notFound"));
-      return "redirect:/rules";
-    }
-
-    model.addAttribute("pageTitle", "page.rules");
-    model.addAttribute("editMode", true);
-    model.addAttribute("categoryId", formData.get().categoryId());
-    model.addAttribute("categoryLabel", formData.get().categoryLabel());
-    model.addAttribute("fragmentsText", formData.get().fragmentsText());
-    return "rule-fragments-form";
+  public String editRuleGroupPage(@PathVariable("categoryId") Integer categoryId) {
+    return "redirect:/categories";
   }
 
   @PostMapping("/rules")
@@ -218,6 +170,40 @@ public class RulesController {
     return "redirect:/rules";
   }
 
+  @GetMapping(value = "/rules/export", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<byte[]> exportRules(@AuthenticationPrincipal UserDetails userDetails) {
+    Optional<String> exportJson = ruleTransferService.exportAsJson(userDetails);
+    if (exportJson.isEmpty()) {
+      return ResponseEntity.notFound().build();
+    }
+
+    byte[] body = exportJson.get().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_JSON)
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"rules-export.json\"")
+        .body(body);
+  }
+
+  @PostMapping("/rules/import")
+  public String importRules(
+      @RequestParam("file") MultipartFile file,
+      @AuthenticationPrincipal UserDetails userDetails,
+      RedirectAttributes redirectAttributes) {
+    RuleTransferService.ImportResult result = ruleTransferService.importFromJson(userDetails, file);
+
+    if (result.status() == RuleTransferService.ImportStatus.SUCCESS) {
+      redirectAttributes.addFlashAttribute("rulesStatus", "success");
+      redirectAttributes.addFlashAttribute(
+          "rulesMessage",
+          msg("rules.import.success", result.importedGroupCount(), result.importedRuleCount()));
+      return "redirect:/rules";
+    }
+
+    redirectAttributes.addFlashAttribute("rulesStatus", "error");
+    redirectAttributes.addFlashAttribute("rulesMessage", importErrorMessage(result));
+    return "redirect:/rules";
+  }
+
   @PostMapping("/rules/{categoryId}/delete")
   public String deleteRuleCategory(
       @PathVariable("categoryId") Integer categoryId,
@@ -236,5 +222,17 @@ public class RulesController {
 
   private String msg(String key, Object... args) {
     return messageSource.getMessage(key, args, LocaleContextHolder.getLocale());
+  }
+
+  private String importErrorMessage(RuleTransferService.ImportResult result) {
+    return switch (result.status()) {
+      case USER_NOT_FOUND -> msg("rules.error.generic");
+      case EMPTY_FILE -> msg("rules.import.error.emptyFile");
+      case INVALID_JSON -> msg("rules.import.error.invalidJson");
+      case INVALID_FORMAT -> msg("rules.import.error.invalidFormat");
+      case INVALID_RULES -> msg("rules.import.error.invalidRules");
+      case UNKNOWN_CATEGORY -> msg("rules.import.error.unknownCategory", result.detail());
+      case SUCCESS -> msg("rules.import.success", result.importedGroupCount(), result.importedRuleCount());
+    };
   }
 }

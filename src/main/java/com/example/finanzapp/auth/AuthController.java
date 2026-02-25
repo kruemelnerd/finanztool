@@ -30,6 +30,11 @@ public class AuthController {
     this.authenticationManager = authenticationManager;
   }
 
+  @GetMapping("/")
+  public String root() {
+    return "redirect:/overview";
+  }
+
   @GetMapping("/login")
   public String login(
       @RequestParam(name = "error", required = false) String error,

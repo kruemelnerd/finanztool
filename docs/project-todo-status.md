@@ -30,6 +30,8 @@ Zuletzt aktualisiert: 2026-02-20
 - Partials-Error-State mit Retry fuer Chart/Recent/Transactions-Table umgesetzt
 - Regeln-Feature auf kategoriezentrierte Verwaltung umgebaut (2-Schritt-Flow, mehrere Fragmente je Kategorie, Aktionen auf Kategorie-Ebene)
 - Konfliktlogik im RuleEngine-Same-Category-Fall gehaertet (mehrere Fragmente derselben Kategorie erzeugen keinen Konflikt)
+- UI-Smoketest fuer `/rules` als E2E-Abdeckung ergaenzt (2-Schritt-Create, Move/Toggle/Run/Delete)
+- Ausgabenliste: Loeschen und Kategorie-Auswahl in ein 3-Punkte-Menue verschoben
 
 ## Aktuelle TODOs (naechste Schritte)
 
@@ -81,4 +83,10 @@ Zuletzt aktualisiert: 2026-02-20
 Diese Datei ist die zentrale Uebergabe fuer den naechsten Arbeitsstand.
 Pfad: `docs/project-todo-status.md`
 
-- TODO naechste Session: kurzer UI-Smoketest fuer `/rules` (2-Schritt-Create, Aktionen Move/Toggle/Run/Delete pro Kategorie).
+- TODO naechste Session: bei den Ausgaben mehrere Eintraege gleichzeitig anzeigen.
+- TODO naechste Session: Kategorien in zwei Teile unterteilen.
+- TODO naechste Session: Hoch/Runter in der bisherigen Form entfernen (nicht benoetigt).
+- TODO naechste Session: auch bei Regeln ein 3-Punkte-Menue fuer Aktionen einfuehren.
+- TODO naechste Session: aus den Ausgaben direkt eine Regel erweitern koennen.
+- TODO naechste Session: 2 Konten sollen moeglich sein.
+- TODO naechste Session: Export der Regeln.

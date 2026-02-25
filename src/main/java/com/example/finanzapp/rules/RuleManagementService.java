@@ -328,6 +328,90 @@ public class RuleManagementService {
     return Optional.of(categoryAssignmentService.runAllRules(user.get()));
   }
 
+  @Transactional
+  public RuleGroupUpdateStatus upsertRuleGroupForCategory(
+      UserDetails userDetails,
+      Integer categoryId,
+      String fragmentsText,
+      boolean active) {
+    if (categoryId == null) {
+      return RuleGroupUpdateStatus.CATEGORY_NOT_FOUND;
+    }
+
+    Optional<User> user = resolveUser(userDetails);
+    if (user.isEmpty()) {
+      return RuleGroupUpdateStatus.USER_NOT_FOUND;
+    }
+
+    Optional<Category> category = resolveSubCategory(user.get(), categoryId);
+    if (category.isEmpty()) {
+      return RuleGroupUpdateStatus.CATEGORY_NOT_FOUND;
+    }
+
+    List<String> fragments = parseFragments(fragmentsText);
+    if (fragments.isEmpty()) {
+      return RuleGroupUpdateStatus.INVALID_FRAGMENTS;
+    }
+
+    List<Rule> existingRules =
+        ruleRepository.findByUserAndCategoryIdAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get(), categoryId);
+    List<String> existingFragments = existingRules.stream()
+        .map(Rule::getMatchText)
+        .filter(value -> value != null && !value.isBlank())
+        .toList();
+
+    if (!existingRules.isEmpty() && existingFragments.equals(fragments)) {
+      boolean changed = false;
+      for (Rule existingRule : existingRules) {
+        if (existingRule.isActive() != active) {
+          existingRule.setActive(active);
+          changed = true;
+        }
+      }
+      if (changed) {
+        ruleRepository.saveAll(existingRules);
+      }
+      return RuleGroupUpdateStatus.SUCCESS;
+    }
+
+    List<Rule> allRules = ruleRepository.findByUserAndDeletedAtIsNullOrderBySortOrderAscIdAsc(user.get());
+    List<Integer> categoryOrder = buildCategoryOrder(allRules);
+
+    if (!existingRules.isEmpty()) {
+      Instant deletedAt = Instant.now();
+      for (Rule existingRule : existingRules) {
+        existingRule.setDeletedAt(deletedAt);
+      }
+      ruleRepository.saveAll(existingRules);
+    }
+
+    int nextSortOrder = allRules.isEmpty() ? 0 : allRules.get(allRules.size() - 1).getSortOrder() + 1;
+    List<Rule> replacementRules = new ArrayList<>();
+    for (String fragment : fragments) {
+      Rule rule = new Rule();
+      rule.setUser(user.get());
+      rule.setName(uniqueRuleName(category.get()));
+      rule.setMatchText(fragment);
+      rule.setMatchField(com.example.finanzapp.domain.RuleMatchField.BOTH);
+      rule.setCategory(category.get());
+      rule.setActive(active);
+      rule.setSortOrder(nextSortOrder++);
+      replacementRules.add(rule);
+    }
+
+    try {
+      ruleRepository.saveAll(replacementRules);
+      if (existingRules.isEmpty()) {
+        normalizeSortOrder(user.get());
+      } else {
+        reindexByCategoryOrder(user.get(), categoryOrder);
+      }
+      return RuleGroupUpdateStatus.SUCCESS;
+    } catch (DataIntegrityViolationException ignored) {
+      return RuleGroupUpdateStatus.PERSISTENCE_ERROR;
+    }
+  }
+
   private boolean moveRuleCategory(UserDetails userDetails, Integer categoryId, int delta) {
     if (categoryId == null) {
       return false;
@@ -533,4 +617,12 @@ public class RuleManagementService {
   public record RuleCategoryOption(Integer id, String label) {}
 
   public record RuleGroupFormData(Integer categoryId, String categoryLabel, String fragmentsText) {}
+
+  public enum RuleGroupUpdateStatus {
+    SUCCESS,
+    USER_NOT_FOUND,
+    CATEGORY_NOT_FOUND,
+    INVALID_FRAGMENTS,
+    PERSISTENCE_ERROR
+  }
 }

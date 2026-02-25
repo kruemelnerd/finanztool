@@ -1,8 +1,12 @@
 package com.example.finanzapp.categories;
 
-import org.springframework.http.ResponseEntity;
+import com.example.finanzapp.rules.RuleManagementService;
+import java.nio.charset.StandardCharsets;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
@@ -12,17 +16,24 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
 public class CategoriesController {
   private final CategoryManagementService categoryManagementService;
+  private final CategoryTransferService categoryTransferService;
+  private final RuleManagementService ruleManagementService;
   private final MessageSource messageSource;
 
   public CategoriesController(
       CategoryManagementService categoryManagementService,
+      CategoryTransferService categoryTransferService,
+      RuleManagementService ruleManagementService,
       MessageSource messageSource) {
     this.categoryManagementService = categoryManagementService;
+    this.categoryTransferService = categoryTransferService;
+    this.ruleManagementService = ruleManagementService;
     this.messageSource = messageSource;
   }
 
@@ -143,6 +154,72 @@ public class CategoriesController {
     return "redirect:/categories";
   }
 
+  @PostMapping("/categories/subcategories/{id}/rule")
+  public String upsertSubcategoryRule(
+      @PathVariable("id") Integer categoryId,
+      @RequestParam("fragmentsText") String fragmentsText,
+      @RequestParam(name = "active", defaultValue = "false") boolean active,
+      @AuthenticationPrincipal UserDetails userDetails,
+      RedirectAttributes redirectAttributes) {
+    RuleManagementService.RuleGroupUpdateStatus status =
+        ruleManagementService.upsertRuleGroupForCategory(userDetails, categoryId, fragmentsText, active);
+
+    if (status == RuleManagementService.RuleGroupUpdateStatus.SUCCESS) {
+      redirectAttributes.addFlashAttribute("categoriesStatus", "success");
+      redirectAttributes.addFlashAttribute("categoriesMessage", msg("categories.rule.save.success"));
+      return "redirect:/categories";
+    }
+
+    redirectAttributes.addFlashAttribute("categoriesStatus", "error");
+    redirectAttributes.addFlashAttribute("categoriesMessage", msg(ruleErrorMessageKey(status)));
+    return "redirect:/categories";
+  }
+
+  @PostMapping("/categories/subcategories/{id}/rule/delete")
+  public String deleteSubcategoryRule(
+      @PathVariable("id") Integer categoryId,
+      @AuthenticationPrincipal UserDetails userDetails,
+      RedirectAttributes redirectAttributes) {
+    if (!ruleManagementService.softDeleteRuleCategory(userDetails, categoryId)) {
+      redirectAttributes.addFlashAttribute("categoriesStatus", "error");
+      redirectAttributes.addFlashAttribute("categoriesMessage", msg("categories.rule.error.notFound"));
+      return "redirect:/categories";
+    }
+
+    redirectAttributes.addFlashAttribute("categoriesStatus", "success");
+    redirectAttributes.addFlashAttribute("categoriesMessage", msg("categories.rule.delete.success"));
+    return "redirect:/categories";
+  }
+
+  @GetMapping(value = "/categories/export", produces = MediaType.APPLICATION_JSON_VALUE)
+  public ResponseEntity<byte[]> exportCategories(@AuthenticationPrincipal UserDetails userDetails) {
+    return categoryTransferService.exportAsJson(userDetails)
+        .map(json -> ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"categories-export.json\"")
+            .body(json.getBytes(StandardCharsets.UTF_8)))
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
+  @PostMapping("/categories/import")
+  public String importCategories(
+      @RequestParam("file") MultipartFile file,
+      @AuthenticationPrincipal UserDetails userDetails,
+      RedirectAttributes redirectAttributes) {
+    CategoryTransferService.ImportResult result = categoryTransferService.importFromJson(userDetails, file);
+    if (result.status() == CategoryTransferService.ImportStatus.SUCCESS) {
+      redirectAttributes.addFlashAttribute("categoriesStatus", "success");
+      redirectAttributes.addFlashAttribute(
+          "categoriesMessage",
+          msg("categories.import.success", result.importedParentCount(), result.importedSubcategoryCount()));
+      return "redirect:/categories";
+    }
+
+    redirectAttributes.addFlashAttribute("categoriesStatus", "error");
+    redirectAttributes.addFlashAttribute("categoriesMessage", importErrorMessage(result));
+    return "redirect:/categories";
+  }
+
   @PostMapping("/categories/reorder")
   public ResponseEntity<Void> reorder(
       @RequestBody CategoryManagementService.CategoryReorderCommand command,
@@ -180,6 +257,26 @@ public class CategoriesController {
       case CANNOT_MOVE -> "categories.error.moveNotPossible";
       case INVALID_REORDER -> "categories.error.reorder";
       case SUCCESS -> "categories.error.generic";
+    };
+  }
+
+  private String ruleErrorMessageKey(RuleManagementService.RuleGroupUpdateStatus status) {
+    return switch (status) {
+      case USER_NOT_FOUND, CATEGORY_NOT_FOUND -> "categories.rule.error.notFound";
+      case INVALID_FRAGMENTS -> "categories.rule.error.invalidFragments";
+      case PERSISTENCE_ERROR -> "categories.rule.error.generic";
+      case SUCCESS -> "categories.rule.error.generic";
+    };
+  }
+
+  private String importErrorMessage(CategoryTransferService.ImportResult result) {
+    return switch (result.status()) {
+      case USER_NOT_FOUND -> msg("categories.error.userNotFound");
+      case EMPTY_FILE -> msg("categories.import.error.emptyFile");
+      case INVALID_JSON -> msg("categories.import.error.invalidJson");
+      case INVALID_FORMAT -> msg("categories.import.error.invalidFormat");
+      case INVALID_CATEGORIES -> msg("categories.import.error.invalidCategories");
+      case SUCCESS -> msg("categories.import.success", result.importedParentCount(), result.importedSubcategoryCount());
     };
   }
 

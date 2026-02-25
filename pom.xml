@@ -124,7 +124,12 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
+          <forkCount>1C</forkCount>
+          <reuseForks>true</reuseForks>
           <argLine>-javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar</argLine>
+          <systemPropertyVariables>
+            <spring.datasource.url>jdbc:sqlite:${project.build.directory}/test-finanzapp-${surefire.forkNumber}.db</spring.datasource.url>
+          </systemPropertyVariables>
         </configuration>
       </plugin>
     </plugins>

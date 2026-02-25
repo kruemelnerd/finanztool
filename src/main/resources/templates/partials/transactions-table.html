@@ -61,39 +61,51 @@
               th:text="#{transactions.category.locked}">Locked</span>
           </div>
 
-          <form
-            class="category-form"
-            th:action="@{'/transactions/' + ${transaction.id} + '/set-category'}"
-            method="post"
-            th:attr="hx-post=@{'/transactions/' + ${transaction.id} + '/set-category'}"
-            hx-target="#transactions-table"
-            hx-swap="outerHTML">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-            <input type="hidden" name="minAmount" th:value="${minAmount}" />
-            <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
-            <input type="hidden" name="nameContains" th:value="${nameContains}" />
-            <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
-            <input type="hidden" name="onlyUncategorized" th:value="${onlyUncategorized}" />
-            <input type="hidden" name="page" th:value="${currentPage}" />
-            <select name="categoryId" required>
-              <option
-                th:each="option : ${categoryOptions}"
-                th:value="${option.id}"
-                th:selected="${option.id == transaction.categoryId}"
-                th:text="${option.label}">Sonstiges -> Unkategorisiert</option>
-            </select>
-            <button type="submit" th:text="#{transactions.category.save}">Save</button>
-          </form>
         </td>
-        <td>
-          <form
-              th:action="@{'/transactions/' + ${transaction.id} + '/delete'}"
-              method="post"
-              onsubmit="return confirm(this.dataset.confirm);"
-              th:attr="data-confirm=#{confirm.deleteTransaction}">
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-            <button type="submit" th:text="#{transactions.delete}">Delete</button>
-          </form>
+        <td class="actions-cell">
+          <details class="row-menu">
+            <summary class="row-menu-trigger" th:attr="aria-label=#{transactions.menu.open}">...</summary>
+            <div class="row-menu-panel">
+              <form
+                class="category-form row-menu-form"
+                th:action="@{'/transactions/' + ${transaction.id} + '/set-category'}"
+                method="post"
+                th:attr="hx-post=@{'/transactions/' + ${transaction.id} + '/set-category'}"
+                hx-target="#transactions-table"
+                hx-swap="outerHTML">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" name="minAmount" th:value="${minAmount}" />
+                <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
+                <input type="hidden" name="nameContains" th:value="${nameContains}" />
+                <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
+                <input type="hidden" name="onlyUncategorized" th:value="${onlyUncategorized}" />
+                <input type="hidden" name="subcategoryId" th:value="${subcategoryId}" />
+                <input type="hidden" name="parentCategoryId" th:value="${parentCategoryId}" />
+                <input type="hidden" name="page" th:value="${currentPage}" />
+                <label class="row-menu-label" th:text="#{table.category}">Category</label>
+                <div class="row-menu-category-row">
+                  <select name="categoryId" required>
+                    <option
+                      th:each="option : ${categoryOptions}"
+                      th:value="${option.id}"
+                      th:selected="${option.id == transaction.categoryId}"
+                      th:text="${option.label}">Sonstiges -> Unkategorisiert</option>
+                  </select>
+                  <button type="submit" th:text="#{transactions.category.save}">Save</button>
+                </div>
+              </form>
+
+              <form
+                class="row-menu-delete-form"
+                th:action="@{'/transactions/' + ${transaction.id} + '/delete'}"
+                method="post"
+                onsubmit="return confirm(this.dataset.confirm);"
+                th:attr="data-confirm=#{confirm.deleteTransaction}">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" th:text="#{transactions.delete}">Delete</button>
+              </form>
+            </div>
+          </details>
         </td>
       </tr>
     </tbody>
@@ -103,6 +115,8 @@
       <input type="hidden" name="nameContains" th:value="${nameContains}" />
       <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
       <input type="hidden" name="onlyUncategorized" th:value="${onlyUncategorized}" />
+      <input type="hidden" name="subcategoryId" th:value="${subcategoryId}" />
+      <input type="hidden" name="parentCategoryId" th:value="${parentCategoryId}" />
       <input type="hidden" name="minAmount" th:value="${minAmount}" />
       <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
       <input type="hidden" name="page" th:value="${previousPage}" />
@@ -115,6 +129,8 @@
       <input type="hidden" name="nameContains" th:value="${nameContains}" />
       <input type="hidden" name="purposeContains" th:value="${purposeContains}" />
       <input type="hidden" name="onlyUncategorized" th:value="${onlyUncategorized}" />
+      <input type="hidden" name="subcategoryId" th:value="${subcategoryId}" />
+      <input type="hidden" name="parentCategoryId" th:value="${parentCategoryId}" />
       <input type="hidden" name="minAmount" th:value="${minAmount}" />
       <input type="hidden" name="maxAmount" th:value="${maxAmount}" />
       <input type="hidden" name="page" th:value="${nextPage}" />

@@ -260,3 +260,6 @@ $RECYCLE.BIN/
 
 # Local agent/tooling workspace
 /.opencode/
+
+# Local planning artifacts
+/.planning/

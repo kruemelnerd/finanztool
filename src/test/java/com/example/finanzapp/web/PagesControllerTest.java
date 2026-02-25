@@ -97,6 +97,20 @@ class PagesControllerTest {
   }
 
   @Test
+  void rootRedirectsWhenUnauthenticated() throws Exception {
+    mockMvc.perform(get("/"))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrlPattern("**/login"));
+  }
+
+  @Test
+  void rootRedirectsToOverviewForAuthenticatedUser() throws Exception {
+    mockMvc.perform(get("/").with(user("user")))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/overview"));
+  }
+
+  @Test
   void overviewRedirectsWhenUnauthenticated() throws Exception {
     mockMvc.perform(get("/overview"))
         .andExpect(status().is3xxRedirection())
@@ -126,10 +140,10 @@ class PagesControllerTest {
   }
 
   @Test
-  void rulesPageLoadsForAuthenticatedUser() throws Exception {
+  void rulesPageRedirectsToCategoriesForAuthenticatedUser() throws Exception {
     mockMvc.perform(get("/rules").with(user("user")))
-        .andExpect(status().isOk())
-        .andExpect(content().string(containsString("Text fragments")));
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"));
   }
 
   @Test
@@ -223,6 +237,127 @@ class PagesControllerTest {
         .andExpect(content().string(containsString("data-rule-open=\"" + inactiveSub.getId() + "\"")))
         .andExpect(content().string(containsString("category-rule-button-active")))
         .andExpect(content().string(containsString("category-rule-button-inactive")));
+  }
+
+  @Test
+  void categoriesExportReturnsJsonAttachment() throws Exception {
+    createUser("categories-export@example.com");
+    User owner = userRepository.findByEmail("categories-export@example.com").orElseThrow();
+
+    Category parent = new Category();
+    parent.setUser(owner);
+    parent.setName("Shopping");
+    parent.setSortOrder(0);
+    parent = categoryRepository.save(parent);
+
+    Category sub = new Category();
+    sub.setUser(owner);
+    sub.setParent(parent);
+    sub.setName("Sport");
+    sub.setSortOrder(0);
+    sub = categoryRepository.save(sub);
+
+    Rule categoryRule = new Rule();
+    categoryRule.setUser(owner);
+    categoryRule.setName("Sport Rule");
+    categoryRule.setMatchText("intersport");
+    categoryRule.setMatchField(RuleMatchField.BOTH);
+    categoryRule.setCategory(sub);
+    categoryRule.setActive(false);
+    categoryRule.setSortOrder(0);
+    ruleRepository.save(categoryRule);
+
+    mockMvc.perform(get("/categories/export").with(user("categories-export@example.com")))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Type", containsString("application/json")))
+        .andExpect(header().string("Content-Disposition", containsString("attachment; filename=\"categories-export.json\"")))
+        .andExpect(content().string(containsString("\"format\" : \"finanztool-categories-v1\"")))
+        .andExpect(content().string(containsString("\"name\" : \"Shopping\"")))
+        .andExpect(content().string(containsString("\"Sport\"")))
+        .andExpect(content().string(containsString("\"ruleGroups\"")))
+        .andExpect(content().string(containsString("\"parentCategory\" : \"Shopping\"")))
+        .andExpect(content().string(containsString("\"category\" : \"Sport\"")))
+        .andExpect(content().string(containsString("\"active\" : false")))
+        .andExpect(content().string(containsString("\"intersport\"")));
+  }
+
+  @Test
+  void categoriesImportAddsMissingParentsAndSubcategories() throws Exception {
+    createUser("categories-import@example.com");
+    User owner = userRepository.findByEmail("categories-import@example.com").orElseThrow();
+
+    Category shopping = new Category();
+    shopping.setUser(owner);
+    shopping.setName("Shopping");
+    shopping.setSortOrder(0);
+    shopping.setDefault(false);
+    shopping.setSystem(false);
+    shopping = categoryRepository.save(shopping);
+
+    Category existingSub = new Category();
+    existingSub.setUser(owner);
+    existingSub.setParent(shopping);
+    existingSub.setName("Sport");
+    existingSub.setSortOrder(0);
+    existingSub.setDefault(false);
+    existingSub.setSystem(false);
+    categoryRepository.save(existingSub);
+
+    String importJson = """
+        {
+          "format": "finanztool-categories-v1",
+          "parents": [
+            {
+              "name": "Shopping",
+              "subcategories": ["Sport", "Shoes"]
+            },
+            {
+              "name": "Travel",
+              "subcategories": ["Flights", "Hotels"]
+            }
+          ]
+        }
+        """;
+
+    MockMultipartFile file = new MockMultipartFile(
+        "file",
+        "categories.json",
+        "application/json",
+        importJson.getBytes(StandardCharsets.UTF_8));
+
+    mockMvc.perform(multipart("/categories/import")
+            .file(file)
+            .with(user("categories-import@example.com"))
+            .with(csrf()))
+        .andExpect(status().is3xxRedirection())
+        .andExpect(redirectedUrl("/categories"))
+        .andExpect(flash().attribute("categoriesStatus", "success"));
+
+    java.util.List<Category> parents =
+        categoryRepository.findByUserAndDeletedAtIsNullAndParentIsNullOrderBySortOrderAscIdAsc(owner);
+    org.assertj.core.api.Assertions.assertThat(parents)
+        .extracting(Category::getName)
+        .contains("Shopping", "Travel");
+
+    Category travel = parents.stream()
+        .filter(parent -> "Travel".equals(parent.getName()))
+        .findFirst()
+        .orElseThrow();
+    java.util.List<Category> travelSubcategories =
+        categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, travel);
+    org.assertj.core.api.Assertions.assertThat(travelSubcategories)
+        .extracting(Category::getName)
+        .containsExactly("Flights", "Hotels");
+
+    Category persistedShopping = parents.stream()
+        .filter(parent -> "Shopping".equals(parent.getName()))
+        .findFirst()
+        .orElseThrow();
+    java.util.List<Category> shoppingSubcategories =
+        categoryRepository.findByUserAndParentAndDeletedAtIsNullOrderBySortOrderAscIdAsc(owner, persistedShopping);
+    org.assertj.core.api.Assertions.assertThat(shoppingSubcategories)
+        .extracting(Category::getName)
+        .containsExactly("Sport", "Shoes");
   }
 
   @Test

@@ -135,6 +135,10 @@ class PlaywrightE2ETest {
     }
   }
 
+  private void openTransactionActionsMenuForRowText(String rowText) {
+    page.locator("#transactions-table tr:has-text('" + rowText + "') summary.row-menu-trigger").click();
+  }
+
   private byte[] readFixtureBytes(String classpathPath) {
     try (InputStream in = Thread.currentThread().getContextClassLoader().getResourceAsStream(classpathPath)) {
       if (in == null) {
@@ -195,6 +199,36 @@ class PlaywrightE2ETest {
     page.locator("#transactions-table").getByText("No transactions to show.").waitFor();
     assertThat(page.locator("#transactions-table").getByText("No transactions to show.").isVisible())
         .isTrue();
+  }
+
+  @Test
+  void categoriesRuleModalSetsRuleFragmentsAndActiveState() {
+    login();
+    String fragment = "ui-categories-rule-" + System.nanoTime();
+
+    page.navigate(baseUrl() + "/categories");
+    page.locator("button[data-rule-open]").first().click();
+    page.locator("#categories-rule-modal").waitFor();
+
+    if (page.locator("#categories-rule-active").isChecked()) {
+      page.locator("#categories-rule-active").uncheck();
+    }
+    page.fill("#categories-rule-fragments", fragment);
+    page.click("#categories-rule-save");
+    page.waitForURL(baseUrl() + "/categories");
+    assertThat(page.locator(".notice").innerText()).contains("Rule saved.");
+
+    page.locator("button[data-rule-open][data-rule-has-rule='true']").first().click();
+    page.locator("#categories-rule-modal").waitFor();
+    assertThat(page.locator("#categories-rule-fragments").inputValue()).contains(fragment);
+    assertThat(page.locator("#categories-rule-active").isChecked()).isFalse();
+
+    if (!page.locator("#categories-rule-active").isChecked()) {
+      page.locator("#categories-rule-active").check();
+    }
+    page.click("#categories-rule-save");
+    page.waitForURL(baseUrl() + "/categories");
+    page.locator("button[data-rule-open][data-rule-has-rule='true'][data-rule-active='true']").first().waitFor();
   }
 
   @Test
@@ -467,8 +501,8 @@ class PlaywrightE2ETest {
 
     page.navigate(baseUrl() + "/transactions");
     page.locator("#transactions-table").getByText("LASTSCHRIFT").waitFor();
-    page.locator("#transactions-table tr:has-text('LASTSCHRIFT') button:has-text('Delete')")
-        .click();
+    openTransactionActionsMenuForRowText("LASTSCHRIFT");
+    page.locator("#transactions-table tr:has-text('LASTSCHRIFT') button:has-text('Delete')").click();
 
     page.waitForURL(baseUrl() + "/transactions");
     page.waitForFunction(
