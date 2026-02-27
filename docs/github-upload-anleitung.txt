@@ -118,3 +118,25 @@ git push origin --delete feature/review-skill-and-categories
 
 # Lokalen master loeschen (nur wenn nicht mehr benoetigt)
 git branch -d master
+
+---
+
+Pruefkommandos (Default-Branch + GitHub Actions auf main)
+
+# 1) Pruefen, dass GitHub-Default-Branch wirklich main ist
+gh repo view --json defaultBranchRef -q '.defaultBranchRef.name'
+
+# 2) Pruefen, dass Workflow im Repo vorhanden ist
+gh workflow list
+
+# 3) Pruefen, ob Runs fuer main existieren
+gh run list --branch main --limit 10
+
+# 4) Optional gezielt den Build-Workflow auf main pruefen
+gh run list --workflow "Build on Main" --branch main --limit 5
+
+# 5) Optional manueller Trigger zum Testen (wenn workflow_dispatch aktiv ist)
+gh workflow run "Build on Main"
+
+# 6) Optional: letzten Run-Status/Logs ansehen
+gh run view --log

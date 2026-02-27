@@ -56,7 +56,7 @@ All commands below assume current directory is repository root.
 - `mvn -Dtest=CsvParserTest#parseFailsWhenHeaderMissing test`
 
 ## Code organization conventions
-- Package base: `com.example.finanzapp`.
+- Package base: `de.kruemelnerd.finanzapp`.
 - Organize by feature (`auth`, `dashboard`, `transactions`, `importcsv`, `settings`, etc.).
 - Keep controllers thin; put business logic in services.
 - Keep persistence logic in repositories.
@@ -119,7 +119,7 @@ All commands below assume current directory is repository root.
 ## CSV import domain conventions (critical)
 - CSV delimiter is semicolon (`;`), including fixtures.
 - CSV headers/metadata are bank-export style German labels (e.g. `Buchungstag`, `Umsatz in EUR`).
-- Parser entrypoint: `src/main/java/com/example/finanzapp/importcsv/CsvParser.java`.
+- Parser entrypoint: `src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvParser.java`.
 - Decode strategy: strict UTF-8 first, fallback to Windows-1252.
 - Deduplication prioritizes extracted reference tokens (`Ref.` / `REF:` variants).
 - Different reference values must not be collapsed as duplicates.
@@ -141,7 +141,7 @@ All commands below assume current directory is repository root.
 - Default stack: JUnit 5 + AssertJ.
 - Web integration tests use `@SpringBootTest` + `@AutoConfigureMockMvc`.
 - Security-aware endpoint tests should use `spring-security-test` helpers (`user(...)`, `csrf()`).
-- Cucumber features live in `src/test/resources/features/` with glue under `com.example.finanzapp.cucumber`.
+- Cucumber features live in `src/test/resources/features/` with glue under `de.kruemelnerd.finanzapp.cucumber`.
 - Playwright tests run headless and are used for end-to-end UI verification.
 
 ## Communication preferences

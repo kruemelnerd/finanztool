@@ -5,9 +5,9 @@
 ## Naming Patterns
 
 **Files:**
-- Feature-oriented package structure under `src/main/java/com/example/finanzapp/` and mirrored tests under `src/test/java/com/example/finanzapp/`.
-- Classes use suffix conventions: controllers in `*Controller` (for example `src/main/java/com/example/finanzapp/transactions/TransactionsController.java`), services in `*Service` (for example `src/main/java/com/example/finanzapp/importcsv/CsvImportService.java`), repositories in `*Repository` (for example `src/main/java/com/example/finanzapp/repository/TransactionRepository.java`).
-- Test classes use `*Test`, `*IntegrationTest`, `*E2ETest` (for example `src/test/java/com/example/finanzapp/importcsv/CsvParserTest.java`, `src/test/java/com/example/finanzapp/repository/TransactionRepositoryIntegrationTest.java`, `src/test/java/com/example/finanzapp/e2e/PlaywrightE2ETest.java`).
+- Feature-oriented package structure under `src/main/java/de/kruemelnerd/finanzapp/` and mirrored tests under `src/test/java/de/kruemelnerd/finanzapp/`.
+- Classes use suffix conventions: controllers in `*Controller` (for example `src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionsController.java`), services in `*Service` (for example `src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportService.java`), repositories in `*Repository` (for example `src/main/java/de/kruemelnerd/finanzapp/repository/TransactionRepository.java`).
+- Test classes use `*Test`, `*IntegrationTest`, `*E2ETest` (for example `src/test/java/de/kruemelnerd/finanzapp/importcsv/CsvParserTest.java`, `src/test/java/de/kruemelnerd/finanzapp/repository/TransactionRepositoryIntegrationTest.java`, `src/test/java/de/kruemelnerd/finanzapp/e2e/PlaywrightE2ETest.java`).
 
 **Functions:**
 - Methods use lowerCamelCase and behavior-focused names (for example `loadTransactionsPage` in `src/main/java/com/example/finanzapp/transactions/TransactionViewService.java`, `parseHandlesUtf8BomAtFileStart` in `src/test/java/com/example/finanzapp/importcsv/CsvParserTest.java`).
@@ -35,12 +35,12 @@
 ## Import Organization
 
 **Order:**
-1. Project imports (`com.example.finanzapp...`) first (see `src/main/java/com/example/finanzapp/transactions/TransactionViewService.java`).
+1. Project imports (`de.kruemelnerd.finanzapp...`) first (see `src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionViewService.java`).
 2. JDK imports (`java...`) next.
 3. Third-party/framework imports (`org.springframework...`, `org.apache...`) last.
 
 **Path Aliases:**
-- Not applicable in Java package imports; fully qualified package imports are used (for example `com.example.finanzapp.repository.TransactionRepository` in `src/main/java/com/example/finanzapp/importcsv/CsvImportService.java`).
+- Not applicable in Java package imports; fully qualified package imports are used (for example `de.kruemelnerd.finanzapp.repository.TransactionRepository` in `src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportService.java`).
 
 ## Error Handling
 
