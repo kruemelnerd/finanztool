@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 
 import de.kruemelnerd.finanzapp.domain.CsvArtifact;
 import de.kruemelnerd.finanzapp.domain.User;
-import de.kruemelnerd.finanzapp.importcsv.CsvUploadService;
+import de.kruemelnerd.finanzapp.importcsv.CsvImportFlashService;
 import de.kruemelnerd.finanzapp.transactions.TransactionViewService;
 import de.kruemelnerd.finanzapp.repository.CsvArtifactRepository;
 import de.kruemelnerd.finanzapp.repository.TransactionRepository;
@@ -37,7 +37,7 @@ class OverviewControllerTest {
   private CsvArtifactRepository csvArtifactRepository;
 
   @Mock
-  private CsvUploadService csvUploadService;
+  private CsvImportFlashService csvImportFlashService;
 
   @Mock
   private TransactionViewService transactionViewService;
@@ -54,7 +54,7 @@ class OverviewControllerTest {
         userRepository,
         transactionRepository,
         csvArtifactRepository,
-        csvUploadService,
+        csvImportFlashService,
         transactionViewService,
         messageSource);
   }
