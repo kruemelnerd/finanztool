@@ -37,6 +37,12 @@ Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Ents
 - Flyway Migrationen
 - Maven
 
+## Release-Prozess
+
+- Ein Release wird nur erstellt, wenn der `Build`-Workflow auf `main` erfolgreich abgeschlossen ist.
+- Der Release-Workflow baut das Jar-Artefakt und erstellt einen GitHub Release mit Tag `release-<version>-<sha7>`.
+- Zusaetzlich wird eine SBOM im SPDX-JSON-Format mit Syft erzeugt und als Release-Asset angehaengt.
+
 ## Anwendung lokal starten
 
 ### Voraussetzungen

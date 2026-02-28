@@ -9,6 +9,8 @@ The format is based on Keep a Changelog.
 ### Added
 
 - Qodana workflow for pull requests and pushes to `main` (`.github/workflows/qodana_code_quality.yml`).
+- GitHub Release workflow (`.github/workflows/release.yml`) that publishes the packaged jar as a release asset.
+- SBOM generation via Syft in SPDX-JSON format and upload as additional release asset.
 
 ### Changed
 
@@ -17,6 +19,8 @@ The format is based on Keep a Changelog.
 - Transaction filter parameters centralized in `TransactionFilterRequest` for controller endpoints.
 - CSV import flash-message handling centralized in `CsvImportFlashService` and reused by overview/settings.
 - GitHub upload guide extended with verification commands for default branch and workflow runs.
+- Release creation is now gated by successful completion of the `Build` workflow on `main`.
+- Release tags now use `release-<version>-<sha7>` to keep reruns idempotent per commit.
 
 ### Fixed
 
