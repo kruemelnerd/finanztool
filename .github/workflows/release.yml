@@ -77,7 +77,7 @@ jobs:
       - name: Generate SBOM (Syft)
         shell: bash
         run: |
-          syft "${{ steps.meta.outputs.jar_path }}" -o "spdx-json=${{ steps.meta.outputs.sbom_path }}"
+          syft "${{ steps.meta.outputs.jar_path }}" -o "cyclonedx-json=${{ steps.meta.outputs.sbom_path }}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
