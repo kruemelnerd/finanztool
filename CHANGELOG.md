@@ -10,7 +10,7 @@ The format is based on Keep a Changelog.
 
 - Qodana workflow for pull requests and pushes to `main` (`.github/workflows/qodana_code_quality.yml`).
 - GitHub Release workflow (`.github/workflows/release.yml`) that publishes the packaged jar as a release asset.
-- SBOM generation via Syft in SPDX-JSON format and upload as additional release asset.
+- SBOM generation via Syft in CycloneDX-JSON format and upload as additional release asset.
 
 ### Changed
 

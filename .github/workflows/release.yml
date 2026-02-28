@@ -44,7 +44,7 @@ jobs:
           SHORT_SHA="${{ github.event.workflow_run.head_sha }}"
           SHORT_SHA="${SHORT_SHA::7}"
           TAG="release-${VERSION}-${SHORT_SHA}"
-          SBOM_PATH="target/sbom-${TAG}.spdx.json"
+          SBOM_PATH="target/sbom-${TAG}.cyclonedx.json"
 
           JAR_PATH=""
           for candidate in target/*.jar; do
@@ -98,7 +98,7 @@ jobs:
       - name: Generate SBOM (Syft)
         shell: bash
         run: |
-          syft "${{ steps.meta.outputs.jar_path }}" -o "spdx-json=${{ steps.meta.outputs.sbom_path }}"
+          syft "${{ steps.meta.outputs.jar_path }}" -o "cyclonedx-json=${{ steps.meta.outputs.sbom_path }}"
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
