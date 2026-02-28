@@ -4,6 +4,12 @@ Finanztool ist eine lokale Web-Anwendung, mit der du deine Bankdaten uebersichtl
 
 Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Entscheidungen. Dieses Projekt schafft eine fokussierte Sicht auf Transaktionen, Kategorien, Regeln und Verlaeufe.
 
+## Einblicke in die App
+
+![Uebersicht im Dashboard](docs/images/readme-overview.png)
+
+![Sankey-Report](docs/images/readme-sankey.png)
+
 ## Wofuer du es nutzen kannst
 
 - Eigene Konto- und Buchungsdaten strukturiert betrachten
