@@ -337,11 +337,6 @@ class PlaywrightE2ETest {
     page.locator(".line-chart").waitFor();
     assertThat(page.locator(".line-chart-line-positive").count()).isEqualTo(1);
     assertThat(page.locator(".line-chart-line-negative").count()).isEqualTo(1);
-    assertThat(page.content()).contains("Kontostand Tagesende:");
-    assertThat(page.content()).contains("Buchungen am 29.01.2026");
-    assertThat(page.locator(".line-chart-tooltip-line").allTextContents())
-        .anySatisfy(line -> assertThat(line).contains("993,44 EUR"));
-
     page.navigate(baseUrl() + "/transactions");
     page.locator(".current-balance strong").waitFor();
     assertThat(page.locator(".current-balance strong").innerText()).contains("-1.982,24 EUR");
