@@ -1,17 +1,68 @@
 # Finanztool
 
-## Stand 2026-02-27
+Finanztool ist eine lokale Web-Anwendung, mit der du deine Bankdaten uebersichtlich analysieren und im Alltag schneller auswerten kannst als in vielen Bank-Apps.
 
-- Basis-Package wurde auf `de.kruemelnerd.finanzapp` konsolidiert (Main- und Test-Code).
-- Maven-Koordinate wurde auf `de.kruemelnerd:finanzapp-mvp` angepasst.
-- Cucumber-Glue nutzt jetzt das neue Package (`de.kruemelnerd.finanzapp.cucumber`).
-- CSV-Import-Flashlogik wurde zentralisiert, damit `OverviewController` und `SettingsController` denselben Ablauf nutzen.
-- Filter-Request-Parameter fuer Transaktionen wurden in ein gemeinsames Request-Objekt ausgelagert (`TransactionFilterRequest`).
-- GitHub-Workflow fuer Qodana wurde hinzugefuegt (`.github/workflows/qodana_code_quality.yml`).
+Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Entscheidungen. Dieses Projekt schafft eine fokussierte Sicht auf Transaktionen, Kategorien, Regeln und Verlaeufe.
+
+## Wofuer du es nutzen kannst
+
+- Eigene Konto- und Buchungsdaten strukturiert betrachten
+- Transaktionen filtern, kategorisieren und bereinigen
+- Wiederkehrende Kategorisierung ueber Regeln automatisieren
+- Kontoverlauf und Geldfluss visuell auswerten
+
+## Kernfeatures
+
+- Authentifizierung mit Registrierung, Login und geschuetzten Bereichen
+- Dashboard mit Saldoverlauf und aktuellen Transaktionen
+- Transaktionsliste mit Filtern und Aktionen (z. B. Soft-Delete, Kategorie setzen)
+- CSV-Import fuer Bankdaten
+- Kategorien verwalten (inkl. Export/Import)
+- Regeln verwalten und ausfuehren (inkl. Export/Import)
+- Sankey-Report fuer Geldflussanalyse
+- Einstellungen fuer Profil, Sprache und Datenloeschung
+
+## Technologie-Stack
+
+- Java 21
+- Spring Boot 3
+- Thymeleaf
+- SQLite
+- Flyway Migrationen
+- Maven
+
+## Anwendung lokal starten
+
+### Voraussetzungen
+
+- Java 21 installiert
+- Maven installiert
+
+### Schnellstart (Entwicklung)
+
+```bash
+mvn spring-boot:run
+```
+
+Danach ist die Anwendung unter `http://localhost:8080` erreichbar.
+
+### Optional: Build und Start als Jar
+
+```bash
+mvn -DskipTests package
+java -jar target/finanzapp-mvp-0.0.1-SNAPSHOT.jar
+```
+
+## Demo-Account
+
+- E-Mail: `user@example.com`
+- Passwort: `password123`
+
+Hinweis: Falls dieser Account lokal noch nicht existiert, kannst du ihn ueber `/register` mit denselben Daten anlegen.
 
 ## Verifikation (Smoke)
 
-- `mvn -DskipTests compile`
-- `mvn -Dtest=CsvParserTest,CsvImportServiceTest,TransactionViewServiceTest test`
-- `mvn -Dtest=CucumberTest -Dcucumber.filter.name="Logout ends the session" test`
-- `mvn org.apache.maven.plugins:maven-pmd-plugin:3.22.0:cpd-check -DminimumTokens=100`
+```bash
+mvn -DskipTests compile
+mvn -Dtest=CsvParserTest,CsvImportServiceTest,TransactionViewServiceTest test
+```
