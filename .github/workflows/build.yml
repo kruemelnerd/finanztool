@@ -34,3 +34,47 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=kruemelnerd_finanztool
+
+      - name: Prepare release assets
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        id: release_assets
+        shell: bash
+        run: |
+          RELEASE_DIR="$RUNNER_TEMP/release-assets"
+          mkdir -p "$RELEASE_DIR"
+
+          shopt -s nullglob
+          JAR_PATH=""
+          for candidate in target/*.jar; do
+            case "$candidate" in
+              *original-*)
+                continue
+                ;;
+              *)
+                JAR_PATH="$candidate"
+                break
+                ;;
+            esac
+          done
+
+          if [ -z "$JAR_PATH" ]; then
+            echo "No release jar found in target/."
+            exit 1
+          fi
+
+          cp "$JAR_PATH" "$RELEASE_DIR/"
+
+          VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          printf '%s\n' "$VERSION" > "$RELEASE_DIR/version.txt"
+          printf '%s\n' "${GITHUB_SHA::7}" > "$RELEASE_DIR/short_sha.txt"
+
+          echo "artifact_name=release-assets-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=$RELEASE_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: Upload release assets
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.release_assets.outputs.artifact_name }}
+          path: ${{ steps.release_assets.outputs.artifact_path }}
+          if-no-files-found: error
