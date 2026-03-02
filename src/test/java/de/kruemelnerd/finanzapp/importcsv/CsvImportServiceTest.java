@@ -406,6 +406,92 @@ class CsvImportServiceTest {
   }
 
   @Test
+  void importTreatsReferenceWithTrailingPunctuationAsDuplicate() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Karte;Buchungstext: Coffee Shop Ref. DEDUP123;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Anderer Vorgang");
+    existing.setPartnerName("Anderer Partner");
+    existing.setPurposeText("Anderer Zweck");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("DEDUP123!!!");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
+  void importExtractsStandaloneReferenceAfterEmbeddedWordFragment() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Karte;Buchungstext: preferred payment Ref.   DEDUP456;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Anderer Vorgang");
+    existing.setPartnerName("Anderer Partner");
+    existing.setPurposeText("Anderer Zweck");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("dedup456");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
+  void importIgnoresReferenceMarkerWithoutTokenAtStringEnd() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Karte;Buchungstext: Coffee Ref;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Karte");
+    existing.setPartnerName("Karte");
+    existing.setPurposeText("Coffee Ref");
+    existing.setAmountCents(-300L);
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
   void importIgnoresMalformedReferenceTokenAndFallsBackToCompositeKey() {
     String csv = String.join("\n",
         "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
