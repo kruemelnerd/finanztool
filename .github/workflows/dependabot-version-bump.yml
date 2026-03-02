@@ -1,0 +1,130 @@
+name: Dependabot Version Bump
+
+on:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
+
+permissions:
+  actions: read
+  contents: write
+  pull-requests: read
+
+concurrency:
+  group: dependabot-version-bump-main
+  cancel-in-progress: false
+
+jobs:
+  bump-version:
+    name: Bump patch version for Dependabot updates
+    if: ${{ github.event.workflow_run.event == 'push' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_repository.fork == false }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check whether commit is merged Dependabot PR
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PRS_JSON="$(gh api \
+            -H "Accept: application/vnd.github+json" \
+            "/repos/$REPOSITORY/commits/$HEAD_SHA/pulls")"
+
+          DEPENDABOT_PR="$(jq -r '[.[] | select(.user.login == "dependabot[bot]" and .merged_at != null)] | first | .number // empty' <<<"$PRS_JSON")"
+
+          if [ -z "$DEPENDABOT_PR" ]; then
+            echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$DEPENDABOT_PR" >> "$GITHUB_OUTPUT"
+
+      - name: Check out main
+        if: steps.gate.outputs.is_dependabot == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        if: steps.gate.outputs.is_dependabot == 'true'
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: temurin
+
+      - name: Cache Maven packages
+        if: steps.gate.outputs.is_dependabot == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
+          restore-keys: ${{ runner.os }}-m2
+
+      - name: Compute next patch version
+        if: steps.gate.outputs.is_dependabot == 'true'
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          CURRENT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          export CURRENT_VERSION
+
+          NEXT_VERSION="$(python3 - <<'PY'
+          import os
+          import re
+          import sys
+
+          current = os.environ["CURRENT_VERSION"].strip()
+          match = re.search(r'(\d+)(?!.*\d)', current)
+          if not match:
+            print(f"Cannot increment version '{current}' because no numeric segment was found.", file=sys.stderr)
+            sys.exit(1)
+
+          next_version = current[:match.start(1)] + str(int(match.group(1)) + 1) + current[match.end(1):]
+          print(next_version)
+          PY
+          )"
+
+          echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "next=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Set new Maven version
+        if: steps.gate.outputs.is_dependabot == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B versions:set -DnewVersion="${{ steps.version.outputs.next }}" -DgenerateBackupPoms=false
+
+      - name: Build jar for new version
+        if: steps.gate.outputs.is_dependabot == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -DskipTests package
+
+      - name: Commit and push version bump
+        if: steps.gate.outputs.is_dependabot == 'true'
+        env:
+          NEXT_VERSION: ${{ steps.version.outputs.next }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- pom.xml; then
+            echo "No version change to commit."
+            exit 0
+          fi
+
+          git add pom.xml
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -m "chore(release): bump version to ${NEXT_VERSION} after Dependabot update"
+          git push origin HEAD:main

@@ -11,6 +11,8 @@ The format is based on Keep a Changelog.
 - Qodana workflow for pull requests and pushes to `main` (`.github/workflows/qodana_code_quality.yml`).
 - GitHub Release workflow (`.github/workflows/release.yml`) that publishes the packaged jar as a release asset.
 - SBOM generation via Syft in CycloneDX-JSON format and upload as additional release asset.
+- Dependabot configuration for Maven and GitHub Actions updates (`.github/dependabot.yml`).
+- `Dependabot Version Bump` workflow (`.github/workflows/dependabot-version-bump.yml`) that increases the patch version after successful Dependabot update builds.
 
 ### Changed
 
@@ -21,6 +23,7 @@ The format is based on Keep a Changelog.
 - GitHub upload guide extended with verification commands for default branch and workflow runs.
 - Release creation is now gated by successful completion of the `Build` workflow on `main`.
 - Release tags now use `release-<version>-<sha7>` to keep reruns idempotent per commit.
+- Release workflow now skips direct release creation for merged Dependabot commits and waits for the generated version-bump commit.
 
 ### Fixed
 
