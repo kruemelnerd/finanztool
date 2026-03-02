@@ -16,16 +16,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class CsvImportService {
   public static final long MAX_SIZE_BYTES = 10L * 1024 * 1024;
-  private static final Pattern REFERENCE_PATTERN =
-      Pattern.compile("(?i)\\bref\\b\\.?\\s*[:#-]?\\s*([^\\s;,)]+)");
   private static final DateTimeFormatter DATE_FORMAT_EN = DateTimeFormatter.ofPattern("yyyy-MM-dd");
   private static final DateTimeFormatter DATE_FORMAT_DE = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
@@ -141,25 +137,107 @@ public class CsvImportService {
       return "";
     }
     String normalized = value.trim().toLowerCase(Locale.ROOT);
-    normalized = normalized.replaceAll("^[\\p{Punct}\\s]+", "");
-    normalized = normalized.replaceAll("[\\p{Punct}\\s]+$", "");
-    return normalized;
+    if (normalized.isEmpty()) {
+      return "";
+    }
+
+    int start = 0;
+    int end = normalized.length() - 1;
+    while (start <= end && isTrimmedReferenceBoundary(normalized.charAt(start))) {
+      start++;
+    }
+    while (end >= start && isTrimmedReferenceBoundary(normalized.charAt(end))) {
+      end--;
+    }
+
+    if (start > end) {
+      return "";
+    }
+    return normalized.substring(start, end + 1);
   }
 
   private String extractReferenceToken(String source) {
-    if (source == null) {
-      return "";
-    }
-    Matcher matcher = REFERENCE_PATTERN.matcher(source);
-    if (!matcher.find()) {
+    if (source == null || source.isBlank()) {
       return "";
     }
 
-    String token = matcher.group(1);
-    if (token == null) {
-      return "";
+    String lower = source.toLowerCase(Locale.ROOT);
+    int fromIndex = 0;
+    while (fromIndex < lower.length()) {
+      int markerStart = lower.indexOf("ref", fromIndex);
+      if (markerStart < 0) {
+        return "";
+      }
+      fromIndex = markerStart + 3;
+
+      if (!isStandaloneRefMarker(lower, markerStart)) {
+        continue;
+      }
+
+      int tokenStart = skipReferencePrefixSeparators(source, markerStart + 3);
+      int tokenEnd = tokenStart;
+      while (tokenEnd < source.length() && !isReferenceTokenTerminator(source.charAt(tokenEnd))) {
+        tokenEnd++;
+      }
+
+      String token = normalizeReference(source.substring(tokenStart, tokenEnd));
+      if (!token.isBlank()) {
+        return token;
+      }
     }
-    return normalizeReference(token);
+
+    return "";
+  }
+
+  private boolean isTrimmedReferenceBoundary(char value) {
+    return Character.isWhitespace(value) || isAsciiPunctuation(value);
+  }
+
+  private boolean isAsciiPunctuation(char value) {
+    return (value >= '!' && value <= '/')
+        || (value >= ':' && value <= '@')
+        || (value >= '[' && value <= '`')
+        || (value >= '{' && value <= '~');
+  }
+
+  private boolean isStandaloneRefMarker(String source, int markerStart) {
+    int before = markerStart - 1;
+    if (before >= 0 && isWordCharacter(source.charAt(before))) {
+      return false;
+    }
+
+    int after = markerStart + 3;
+    return after >= source.length() || !isWordCharacter(source.charAt(after));
+  }
+
+  private boolean isWordCharacter(char value) {
+    return Character.isLetterOrDigit(value) || value == '_';
+  }
+
+  private int skipReferencePrefixSeparators(String source, int index) {
+    int current = index;
+
+    if (current < source.length() && source.charAt(current) == '.') {
+      current++;
+    }
+    while (current < source.length() && Character.isWhitespace(source.charAt(current))) {
+      current++;
+    }
+    if (current < source.length()) {
+      char value = source.charAt(current);
+      if (value == ':' || value == '#' || value == '-') {
+        current++;
+      }
+    }
+    while (current < source.length() && Character.isWhitespace(source.charAt(current))) {
+      current++;
+    }
+
+    return current;
+  }
+
+  private boolean isReferenceTokenTerminator(char value) {
+    return Character.isWhitespace(value) || value == ';' || value == ',' || value == ')';
   }
 
   private String formatDuplicate(Transaction transaction, Locale locale) {

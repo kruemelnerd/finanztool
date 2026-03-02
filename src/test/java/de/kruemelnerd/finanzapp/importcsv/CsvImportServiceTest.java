@@ -377,6 +377,35 @@ class CsvImportServiceTest {
   }
 
   @Test
+  void importTreatsHashReferenceDelimiterAsDuplicate() {
+    String csv = String.join("\n",
+        "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
+        "23.10.2025;23.10.2025;Kartenverfügung;Buchungstext: REST. DANA SNACK-IT, AMSTERDAM NL Ref# 6P2C21SF0YDH26QB/83955;-3,00");
+    byte[] bytes = csv.getBytes(StandardCharsets.UTF_8);
+
+    User user = new User();
+    user.setEmail("user@example.com");
+    user.setPasswordHash("hashed");
+
+    Transaction existing = new Transaction();
+    existing.setUser(user);
+    existing.setBookingDateTime(java.time.LocalDateTime.of(2025, 10, 23, 0, 0));
+    existing.setTransactionType("Andere Beschreibung");
+    existing.setPartnerName("Irgendein Name");
+    existing.setPurposeText("Abweichender Text");
+    existing.setAmountCents(-300L);
+    existing.setReferenceText("6P2C21SF0YDH26QB/83955");
+
+    when(transactionRepository.findByUserAndDeletedAtIsNullOrderByBookingDateTimeDesc(user))
+        .thenReturn(List.of(existing));
+
+    CsvImportResult result = csvImportService.importCsv(user, "file.csv", "text/csv", bytes);
+
+    assertThat(result.importedCount()).isEqualTo(0);
+    assertThat(result.duplicateCount()).isEqualTo(1);
+  }
+
+  @Test
   void importIgnoresMalformedReferenceTokenAndFallsBackToCompositeKey() {
     String csv = String.join("\n",
         "Buchungstag;Wertstellung (Valuta);Vorgang;Buchungstext;Umsatz in EUR",
