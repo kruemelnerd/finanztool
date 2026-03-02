@@ -28,6 +28,7 @@ The format is based on Keep a Changelog.
 - Release action references are pinned to full commit SHAs.
 - Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
 - Build workflow now waits for Sonar quality gate result before reporting success.
+- Auto-merge workflow now supports an optional `AUTOMERGE_TOKEN` secret for Dependabot PRs that modify files under `.github/workflows/`.
 
 ### Fixed
 

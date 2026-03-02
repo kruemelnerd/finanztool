@@ -41,6 +41,7 @@ Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Ents
 
 - Dependabot prueft taeglich Maven- und GitHub-Actions-Abhaengigkeiten und erstellt bei Updates PRs.
 - Dependabot-PRs werden nach erfolgreichem `Build`-Workflow automatisch gemerged.
+- Wenn ein Dependabot-PR Dateien unter `.github/workflows/` aendert, ist dafuer ein Secret `AUTOMERGE_TOKEN` (PAT mit `repo` + `workflow`) noetig.
 - Bei Dependabot-Updates laeuft nach dem Merge auf `main` der komplette `Build`-Workflow inkl. Tests und Sonar-Analyse.
 - Ist dieser Lauf erfolgreich, erhoeht der Job `Dependabot Version Bump` im `Build`-Workflow automatisch die Patch-Version in `pom.xml`, baut das neue Jar und pusht den Versions-Commit.
 - Der naechste erfolgreiche Build erstellt den GitHub Release mit Tag `release-<version>-<sha7>`.

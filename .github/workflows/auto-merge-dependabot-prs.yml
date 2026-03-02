@@ -20,11 +20,11 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
-      workflows: write
     steps:
       - name: Resolve and merge pull request
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN != '' && secrets.AUTOMERGE_TOKEN || github.token }}
+          HAS_AUTOMERGE_TOKEN: ${{ secrets.AUTOMERGE_TOKEN != '' }}
           REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.event.workflow_run.id }}
         shell: bash
@@ -69,6 +69,12 @@ jobs:
           else
             echo "No merge method is enabled in repository settings."
             exit 1
+          fi
+
+          WORKFLOW_FILES_CHANGED="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json files --jq '[.files[] | select(.path | startswith(".github/workflows/"))] | length')"
+          if [ "$WORKFLOW_FILES_CHANGED" -gt 0 ] && [ "$HAS_AUTOMERGE_TOKEN" != "true" ]; then
+            echo "Skipping PR #$PR_NUMBER because it changes workflow files and AUTOMERGE_TOKEN is not configured."
+            exit 0
           fi
 
           gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" "$MERGE_METHOD" --delete-branch
