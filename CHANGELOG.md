@@ -25,6 +25,7 @@ The format is based on Keep a Changelog.
 - Release tags now use `release-<version>-<sha7>` to keep reruns idempotent per commit.
 - Release workflow now skips direct release creation for merged Dependabot commits and waits for the generated version-bump commit.
 - Release action references are pinned to full commit SHAs.
+- Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
 
 ### Fixed
 
