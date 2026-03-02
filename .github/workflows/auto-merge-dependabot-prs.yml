@@ -1,0 +1,73 @@
+name: Auto Merge Dependabot PRs
+
+on:
+  workflow_run:
+    workflows:
+      - Build
+    types:
+      - completed
+
+concurrency:
+  group: auto-merge-pr-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  auto-merge:
+    name: Merge Dependabot PR after successful checks
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_repository.fork == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Resolve and merge pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="$(gh api "/repos/$REPOSITORY/actions/runs/$RUN_ID" --jq '.pull_requests[0].number // empty')"
+          if [ -z "$PR_NUMBER" ]; then
+            echo "No pull request linked to workflow run $RUN_ID."
+            exit 0
+          fi
+
+          AUTHOR_LOGIN="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json author --jq '.author.login')"
+          if [ "$AUTHOR_LOGIN" != "app/dependabot" ] && [ "$AUTHOR_LOGIN" != "dependabot[bot]" ]; then
+            echo "Skipping PR #$PR_NUMBER because author is $AUTHOR_LOGIN."
+            exit 0
+          fi
+
+          PR_STATE="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json state --jq '.state')"
+          PR_DRAFT="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json isDraft --jq '.isDraft')"
+          if [ "$PR_STATE" != "OPEN" ] || [ "$PR_DRAFT" = "true" ]; then
+            echo "Skipping PR #$PR_NUMBER because state=$PR_STATE draft=$PR_DRAFT."
+            exit 0
+          fi
+
+          MERGE_STATE="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json mergeStateStatus --jq '.mergeStateStatus')"
+          case "$MERGE_STATE" in
+            CLEAN|HAS_HOOKS|UNSTABLE)
+              ;;
+            *)
+              echo "Skipping PR #$PR_NUMBER because mergeStateStatus=$MERGE_STATE."
+              exit 0
+              ;;
+          esac
+
+          if [ "$(gh repo view "$REPOSITORY" --json squashMergeAllowed --jq '.squashMergeAllowed')" = "true" ]; then
+            MERGE_METHOD="--squash"
+          elif [ "$(gh repo view "$REPOSITORY" --json mergeCommitAllowed --jq '.mergeCommitAllowed')" = "true" ]; then
+            MERGE_METHOD="--merge"
+          elif [ "$(gh repo view "$REPOSITORY" --json rebaseMergeAllowed --jq '.rebaseMergeAllowed')" = "true" ]; then
+            MERGE_METHOD="--rebase"
+          else
+            echo "No merge method is enabled in repository settings."
+            exit 1
+          fi
+
+          gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" "$MERGE_METHOD" --delete-branch

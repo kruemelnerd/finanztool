@@ -13,6 +13,7 @@ The format is based on Keep a Changelog.
 - SBOM generation via Syft in CycloneDX-JSON format and upload as additional release asset.
 - Dependabot configuration for Maven and GitHub Actions updates (`.github/dependabot.yml`).
 - `Dependabot Version Bump` job in `.github/workflows/build.yml` that increases the patch version after successful Dependabot update builds.
+- Auto-merge workflow for Dependabot pull requests after successful `Build` checks (`.github/workflows/auto-merge-dependabot-prs.yml`).
 
 ### Changed
 
@@ -26,6 +27,7 @@ The format is based on Keep a Changelog.
 - Release workflow now skips direct release creation for merged Dependabot commits and waits for the generated version-bump commit.
 - Release action references are pinned to full commit SHAs.
 - Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
+- Build workflow now waits for Sonar quality gate result before reporting success.
 
 ### Fixed
 
