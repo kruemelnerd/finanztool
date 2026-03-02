@@ -20,6 +20,7 @@ jobs:
       actions: read
       contents: write
       pull-requests: write
+      workflows: write
     steps:
       - name: Resolve and merge pull request
         env:
