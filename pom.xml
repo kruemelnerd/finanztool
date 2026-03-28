@@ -51,7 +51,7 @@
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.46.0.0</version>
+      <version>3.51.3.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -87,13 +87,13 @@
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-java</artifactId>
-      <version>7.20.1</version>
+      <version>7.34.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-spring</artifactId>
-      <version>7.20.1</version>
+      <version>7.34.3</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -111,7 +111,7 @@
     <dependency>
       <groupId>com.microsoft.playwright</groupId>
       <artifactId>playwright</artifactId>
-      <version>1.47.0</version>
+      <version>1.58.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -125,7 +125,7 @@
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.12</version>
+        <version>0.8.14</version>
         <executions>
           <execution>
             <goals>
