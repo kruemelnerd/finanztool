@@ -4,6 +4,14 @@ Finanztool ist eine lokale Web-Anwendung, mit der du deine Bankdaten uebersichtl
 
 Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Entscheidungen. Dieses Projekt schafft eine fokussierte Sicht auf Transaktionen, Kategorien, Regeln und Verlaeufe.
 
+### Badges
+[![Build](https://github.com/kruemelnerd/finanztool/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/kruemelnerd/finanztool/actions/workflows/build.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=kruemelnerd_finanztool&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kruemelnerd_finanztool)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=kruemelnerd_finanztool&metric=coverage)](https://sonarcloud.io/summary/new_code?id=kruemelnerd_finanztool)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=kruemelnerd_finanztool&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=kruemelnerd_finanztool)
+
+
+
 ## Einblicke in die App
 
 ![Uebersicht im Dashboard](docs/images/readme-overview.png)
@@ -45,7 +53,7 @@ Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Ents
 - Bei Dependabot-Updates laeuft nach dem Merge auf `main` der komplette `Build`-Workflow inkl. Tests und Sonar-Analyse.
 - Auch normale Commits auf `main` triggern immer den kompletten `Build`-Workflow.
 - Ist dieser Lauf erfolgreich, erhoeht der Job `Dependabot Version Bump` im `Build`-Workflow automatisch nur die letzte Ziffer in `pom.xml`, baut das neue Jar und pusht den Versions-Commit.
-- Jeder erfolgreiche `Build` auf `main` triggert den Release-Workflow, der mit JReleaser einen GitHub Release erstellt.
+- Der Job `Build and publish release` im `Build`-Workflow erstellt mit JReleaser automatisch einen GitHub Release.
 - JReleaser erzeugt dabei den Release-Tag `release-<version>-<sha7>`, laedt das Jar hoch und fuegt Checksummen hinzu.
 - `target/jreleaser/trace.log` und `target/jreleaser/output.properties` werden als Workflow-Artefakte gespeichert.
 
