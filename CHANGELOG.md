@@ -29,6 +29,7 @@ The format is based on Keep a Changelog.
 - Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
 - Build workflow now waits for Sonar quality gate result before reporting success.
 - Release job now injects `JRELEASER_PROJECT_VERSION`, `JRELEASER_TAG_NAME`, and `JRELEASER_RELEASE_NAME`, while `jreleaser.yml` uses those injected values instead of unresolved hash templates.
+- GitHub Actions pins were updated to Node24-ready revisions (`actions/checkout`, `actions/setup-java`, `actions/cache`, `actions/upload-artifact`) to remove Node20 deprecation warnings.
 - Auto-merge workflow now supports an optional `AUTOMERGE_TOKEN` secret for Dependabot PRs that modify files under `.github/workflows/`.
 
 ### Fixed
