@@ -207,8 +207,10 @@ jobs:
           set -euo pipefail
 
           PROJECT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          RELEASE_TAG="release-${PROJECT_VERSION}-${GITHUB_SHA::7}"
+
           echo "project_version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
-          echo "commit_short_hash=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Run JReleaser
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5
@@ -217,7 +219,8 @@ jobs:
         env:
           JRELEASER_GITHUB_TOKEN: ${{ github.token }}
           JRELEASER_PROJECT_VERSION: ${{ steps.release-meta.outputs.project_version }}
-          JRELEASER_COMMIT_SHORT_HASH: ${{ steps.release-meta.outputs.commit_short_hash }}
+          JRELEASER_RELEASE_GITHUB_TAG_NAME: ${{ steps.release-meta.outputs.release_tag }}
+          JRELEASER_RELEASE_GITHUB_RELEASE_NAME: Release ${{ steps.release-meta.outputs.release_tag }}
 
       - name: Upload JReleaser logs
         if: always()

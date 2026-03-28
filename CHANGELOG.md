@@ -28,7 +28,7 @@ The format is based on Keep a Changelog.
 - Build workflow no longer uploads release assets; it remains focused on CI and Dependabot version bumping.
 - Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
 - Build workflow now waits for Sonar quality gate result before reporting success.
-- Release job now provides `JRELEASER_PROJECT_VERSION` and `JRELEASER_COMMIT_SHORT_HASH` so JReleaser can resolve release metadata on GitHub Actions.
+- Release job now injects `JRELEASER_PROJECT_VERSION` and explicit GitHub release tag/name values so JReleaser resolves release metadata deterministically on GitHub Actions.
 - Auto-merge workflow now supports an optional `AUTOMERGE_TOKEN` secret for Dependabot PRs that modify files under `.github/workflows/`.
 
 ### Fixed
