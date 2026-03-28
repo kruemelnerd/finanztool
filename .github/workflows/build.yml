@@ -219,8 +219,8 @@ jobs:
         env:
           JRELEASER_GITHUB_TOKEN: ${{ github.token }}
           JRELEASER_PROJECT_VERSION: ${{ steps.release-meta.outputs.project_version }}
-          JRELEASER_RELEASE_GITHUB_TAG_NAME: ${{ steps.release-meta.outputs.release_tag }}
-          JRELEASER_RELEASE_GITHUB_RELEASE_NAME: Release ${{ steps.release-meta.outputs.release_tag }}
+          JRELEASER_TAG_NAME: ${{ steps.release-meta.outputs.release_tag }}
+          JRELEASER_RELEASE_NAME: Release ${{ steps.release-meta.outputs.release_tag }}
 
       - name: Upload JReleaser logs
         if: always()
