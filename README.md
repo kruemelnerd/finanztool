@@ -43,6 +43,7 @@ Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Ents
 - Dependabot-PRs werden nach erfolgreichem `Build`-Workflow automatisch gemerged.
 - Wenn ein Dependabot-PR Dateien unter `.github/workflows/` aendert, ist dafuer ein Secret `AUTOMERGE_TOKEN` (PAT mit `repo` + `workflow`) noetig.
 - Bei Dependabot-Updates laeuft nach dem Merge auf `main` der komplette `Build`-Workflow inkl. Tests und Sonar-Analyse.
+- Auch normale Commits auf `main` triggern immer den kompletten `Build`-Workflow.
 - Ist dieser Lauf erfolgreich, erhoeht der Job `Dependabot Version Bump` im `Build`-Workflow automatisch nur die letzte Ziffer in `pom.xml`, baut das neue Jar und pusht den Versions-Commit.
 - Jeder erfolgreiche `Build` auf `main` triggert den Release-Workflow, der mit JReleaser einen GitHub Release erstellt.
 - JReleaser erzeugt dabei den Release-Tag `release-<version>-<sha7>`, laedt das Jar hoch und fuegt Checksummen hinzu.
