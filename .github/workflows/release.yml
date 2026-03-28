@@ -50,8 +50,19 @@ jobs:
         if: steps.gate.outputs.skip_release != 'true'
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
+          ref: main
           fetch-depth: 0
+
+      - name: Validate and check out trusted commit
+        if: steps.gate.outputs.skip_release != 'true'
+        env:
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git merge-base --is-ancestor "$HEAD_SHA" origin/main
+          git checkout --detach "$HEAD_SHA"
 
       - name: Set up JDK 21
         if: steps.gate.outputs.skip_release != 'true'
@@ -67,7 +78,7 @@ jobs:
 
       - name: Run JReleaser
         if: steps.gate.outputs.skip_release != 'true'
-        uses: jreleaser/release-action@v2
+        uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5
         with:
           setup-java: false
         env:
