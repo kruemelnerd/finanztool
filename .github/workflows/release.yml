@@ -46,78 +46,39 @@ jobs:
 
           echo "skip_release=false" >> "$GITHUB_OUTPUT"
 
-      - name: Download release assets
+      - name: Check out release commit
         if: steps.gate.outputs.skip_release != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          RELEASE_DIR="$RUNNER_TEMP/release-assets"
-          mkdir -p "$RELEASE_DIR"
-
-          gh run download "${{ github.event.workflow_run.id }}" \
-            --repo "${{ github.repository }}" \
-            --name "release-assets-${{ github.event.workflow_run.head_sha }}" \
-            --dir "$RELEASE_DIR"
-
-      - name: Prepare release metadata
-        if: steps.gate.outputs.skip_release != 'true'
-        id: meta
-        shell: bash
-        run: |
-          RELEASE_DIR="$RUNNER_TEMP/release-assets"
-
-          shopt -s nullglob globstar
-
-          VERSION_FILE=""
-          for candidate in "$RELEASE_DIR"/**/version.txt; do
-            VERSION_FILE="$candidate"
-            break
-          done
-
-          SHORT_SHA_FILE=""
-          for candidate in "$RELEASE_DIR"/**/short_sha.txt; do
-            SHORT_SHA_FILE="$candidate"
-            break
-          done
-
-          if [ -z "$VERSION_FILE" ] || [ -z "$SHORT_SHA_FILE" ]; then
-            echo "Release metadata files are missing."
-            exit 1
-          fi
-
-          VERSION="$(tr -d '\n' < "$VERSION_FILE")"
-          SHORT_SHA="$(tr -d '\n' < "$SHORT_SHA_FILE")"
-          TAG="release-${VERSION}-${SHORT_SHA}"
-
-          JAR_PATH=""
-          for candidate in "$RELEASE_DIR"/**/*.jar; do
-            case "$candidate" in
-              *original-*)
-                continue
-                ;;
-              *)
-                JAR_PATH="$candidate"
-                break
-                ;;
-            esac
-          done
-
-          if [ -z "$JAR_PATH" ]; then
-            echo "No release jar found in downloaded release assets."
-            exit 1
-          fi
-
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          echo "jar_path=$JAR_PATH" >> "$GITHUB_OUTPUT"
-
-      - name: Create GitHub release
-        if: steps.gate.outputs.skip_release != 'true'
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: ${{ steps.meta.outputs.tag }}
-          target_commitish: ${{ github.event.workflow_run.head_sha }}
-          generate_release_notes: true
-          files: |
-            ${{ steps.meta.outputs.jar_path }}
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: Set up JDK 21
+        if: steps.gate.outputs.skip_release != 'true'
+        uses: actions/setup-java@c1e323688fd81a25caa38c78aa6df2d33d3e20d9
+        with:
+          java-version: 21
+          distribution: temurin
+          cache: maven
+
+      - name: Build release artifact
+        if: steps.gate.outputs.skip_release != 'true'
+        run: mvn -B -DskipTests package
+
+      - name: Run JReleaser
+        if: steps.gate.outputs.skip_release != 'true'
+        uses: jreleaser/release-action@v2
+        with:
+          setup-java: false
+        env:
+          JRELEASER_GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload JReleaser logs
+        if: always() && steps.gate.outputs.skip_release != 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: jreleaser-release-${{ github.event.workflow_run.head_sha }}
+          path: |
+            out/jreleaser/trace.log
+            out/jreleaser/output.properties
+          if-no-files-found: ignore

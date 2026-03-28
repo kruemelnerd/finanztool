@@ -9,8 +9,7 @@ The format is based on Keep a Changelog.
 ### Added
 
 - Qodana workflow for pull requests and pushes to `main` (`.github/workflows/qodana_code_quality.yml`).
-- GitHub Release workflow (`.github/workflows/release.yml`) that publishes the packaged jar as a release asset.
-- SBOM generation via Syft in CycloneDX-JSON format and upload as additional release asset.
+- JReleaser-based GitHub Release workflow (`.github/workflows/release.yml`) that publishes the packaged jar automatically.
 - Dependabot configuration for Maven and GitHub Actions updates (`.github/dependabot.yml`).
 - `Dependabot Version Bump` job in `.github/workflows/build.yml` that increases the patch version after successful Dependabot update builds.
 - Auto-merge workflow for Dependabot pull requests after successful `Build` checks (`.github/workflows/auto-merge-dependabot-prs.yml`).
@@ -25,7 +24,8 @@ The format is based on Keep a Changelog.
 - Release creation is now gated by successful completion of the `Build` workflow on `main`.
 - Release tags now use `release-<version>-<sha7>` to keep reruns idempotent per commit.
 - Release workflow now skips direct release creation for merged Dependabot commits and waits for the generated version-bump commit.
-- Release action references are pinned to full commit SHAs.
+- Release workflow now uses JReleaser end-to-end instead of `softprops/action-gh-release` and workflow artifact handoff.
+- Build workflow no longer uploads release assets; it remains focused on CI and Dependabot version bumping.
 - Build workflow permissions were scoped to job-level and JaCoCo XML coverage reporting was enabled for Sonar quality gate evaluation.
 - Build workflow now waits for Sonar quality gate result before reporting success.
 - Auto-merge workflow now supports an optional `AUTOMERGE_TOKEN` secret for Dependabot PRs that modify files under `.github/workflows/`.

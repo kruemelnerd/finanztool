@@ -1,0 +1,37 @@
+project:
+  name: finanztool
+  description: Finanzapp MVP
+  longDescription: Finanztool ist eine lokale Web-Anwendung zur Auswertung von Bankdaten.
+  links:
+    homepage: https://github.com/kruemelnerd/finanztool
+  authors:
+    - Philipp
+  license: Apache-2.0
+  inceptionYear: 2026
+  languages:
+    java:
+      version: 21
+      groupId: de.kruemelnerd
+      artifactId: finanzapp-mvp
+      mainClass: de.kruemelnerd.finanzapp.FinanzappApplication
+
+release:
+  github:
+    owner: kruemelnerd
+    name: finanztool
+    branch: main
+    overwrite: true
+    makeLatest: true
+    tagName: release-{{projectVersion}}-{{commitShortHash}}
+    releaseName: Release {{tagName}}
+    changelog:
+      formatted: ALWAYS
+      preset: conventional-commits
+      contributors:
+        format: '- {{contributorName}}{{#contributorUsernameAsLink}} ({{.}}){{/contributorUsernameAsLink}}'
+
+distributions:
+  finanzapp-mvp:
+    type: SINGLE_JAR
+    artifacts:
+      - path: target/{{distributionName}}-{{projectVersion}}.jar
