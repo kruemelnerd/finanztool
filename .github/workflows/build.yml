@@ -38,75 +38,105 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=kruemelnerd_finanztool -Dsonar.qualitygate.wait=true -Dsonar.qualitygate.timeout=600
 
-  dependabot-version-bump:
-    name: Dependabot Version Bump
+  version-bump:
+    name: Semantic Version Bump
     needs: build
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     outputs:
-      is_dependabot: ${{ steps.gate.outputs.is_dependabot }}
+      is_version_bump_commit: ${{ steps.gate.outputs.is_version_bump_commit }}
     permissions:
       contents: write
-      pull-requests: read
     concurrency:
-      group: dependabot-version-bump-main
+      group: version-bump-main
       cancel-in-progress: false
     steps:
-      - name: Check whether commit is merged Dependabot PR
-        id: gate
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          HEAD_SHA: ${{ github.sha }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          PRS_JSON="$(gh api \
-            -H "Accept: application/vnd.github+json" \
-            "/repos/$REPOSITORY/commits/$HEAD_SHA/pulls")"
-
-          DEPENDABOT_PR="$(jq -r '[.[] | select(.user.login == "dependabot[bot]" and .merged_at != null)] | first | .number // empty' <<<"$PRS_JSON")"
-
-          if [ -z "$DEPENDABOT_PR" ]; then
-            echo "is_dependabot=false" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "is_dependabot=true" >> "$GITHUB_OUTPUT"
-          echo "pr_number=$DEPENDABOT_PR" >> "$GITHUB_OUTPUT"
-
       - name: Check out main
-        if: steps.gate.outputs.is_dependabot == 'true'
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: main
           fetch-depth: 0
 
+      - name: Detect auto version bump commit
+        id: gate
+        env:
+          HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          HEAD_MESSAGE="$(git log -1 --pretty=%B "$HEAD_SHA")"
+          if printf '%s' "$HEAD_MESSAGE" | grep -Eq '^chore\(release\): bump version to '; then
+            echo "is_version_bump_commit=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "is_version_bump_commit=false" >> "$GITHUB_OUTPUT"
+
       - name: Set up JDK 21
-        if: steps.gate.outputs.is_dependabot == 'true'
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654
         with:
           java-version: 21
           distribution: temurin
 
       - name: Cache Maven packages
-        if: steps.gate.outputs.is_dependabot == 'true'
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         uses: actions/cache@668228422ae6a00e4ad889ee87cd7109ec5666a7
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
-      - name: Compute next patch version
-        if: steps.gate.outputs.is_dependabot == 'true'
+      - name: Determine semantic bump level
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
+        id: semver
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          RANGE="$BEFORE_SHA..$HEAD_SHA"
+          if [ -z "$BEFORE_SHA" ] || [ "$BEFORE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            RANGE="$HEAD_SHA^..$HEAD_SHA"
+          fi
+
+          COMMIT_MESSAGES="$(git log --format=%B "$RANGE")"
+          export COMMIT_MESSAGES
+
+          BUMP_LEVEL="$(python3 - <<'PY'
+          import os
+          import re
+
+          messages = os.environ.get("COMMIT_MESSAGES", "")
+
+          if re.search(r'(^|\n)\s*BREAKING CHANGE\s*:', messages, flags=re.IGNORECASE):
+            print("major")
+          elif re.search(r'^[a-zA-Z]+(?:\([^)]+\))?!:', messages, flags=re.MULTILINE):
+            print("major")
+          elif re.search(r'^feat(?:\([^)]+\))?:', messages, flags=re.MULTILINE):
+            print("minor")
+          else:
+            print("patch")
+          PY
+          )"
+
+          echo "level=$BUMP_LEVEL" >> "$GITHUB_OUTPUT"
+
+      - name: Compute next version
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         id: version
+        env:
+          BUMP_LEVEL: ${{ steps.semver.outputs.level }}
         shell: bash
         run: |
           set -euo pipefail
 
           CURRENT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
           export CURRENT_VERSION
+          export BUMP_LEVEL
 
           NEXT_VERSION="$(python3 - <<'PY'
           import os
@@ -114,36 +144,55 @@ jobs:
           import sys
 
           current = os.environ["CURRENT_VERSION"].strip()
-          match = re.search(r'(\d+)(?!.*\d)', current)
+          bump = os.environ["BUMP_LEVEL"].strip()
+
+          match = re.fullmatch(r'(\d+)\.(\d+)\.(\d+)([.-].+)?', current)
           if not match:
-            print(f"Cannot increment version '{current}' because no numeric segment was found.", file=sys.stderr)
+            print(f"Cannot increment version '{current}' because it is not semver-like (<major>.<minor>.<patch>).", file=sys.stderr)
             sys.exit(1)
 
-          next_version = current[:match.start(1)] + str(int(match.group(1)) + 1) + current[match.end(1):]
+          major = int(match.group(1))
+          minor = int(match.group(2))
+          patch = int(match.group(3))
+          suffix = match.group(4) or ""
+
+          if bump == "major":
+            major += 1
+            minor = 0
+            patch = 0
+          elif bump == "minor":
+            minor += 1
+            patch = 0
+          else:
+            patch += 1
+
+          next_version = f"{major}.{minor}.{patch}{suffix}"
           print(next_version)
           PY
           )"
 
+          echo "bump_level=$BUMP_LEVEL" >> "$GITHUB_OUTPUT"
           echo "current=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
           echo "next=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Set new Maven version
-        if: steps.gate.outputs.is_dependabot == 'true'
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         shell: bash
         run: |
           set -euo pipefail
           mvn -B versions:set -DnewVersion="${{ steps.version.outputs.next }}" -DgenerateBackupPoms=false
 
       - name: Build jar for new version
-        if: steps.gate.outputs.is_dependabot == 'true'
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         shell: bash
         run: |
           set -euo pipefail
           mvn -B -DskipTests package
 
       - name: Commit and push version bump
-        if: steps.gate.outputs.is_dependabot == 'true'
+        if: steps.gate.outputs.is_version_bump_commit != 'true'
         env:
+          BUMP_LEVEL: ${{ steps.version.outputs.bump_level }}
           NEXT_VERSION: ${{ steps.version.outputs.next }}
         shell: bash
         run: |
@@ -156,15 +205,15 @@ jobs:
 
           git add pom.xml
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
-            commit -m "chore(release): bump version to ${NEXT_VERSION} after Dependabot update"
+            commit -m "chore(release): bump version to ${NEXT_VERSION} (${BUMP_LEVEL})"
           git push origin HEAD:main
 
   release:
     name: Build and publish release
     needs:
       - build
-      - dependabot-version-bump
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.dependabot-version-bump.result == 'success' && needs.dependabot-version-bump.outputs.is_dependabot != 'true' }}
+      - version-bump
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.version-bump.result == 'success' && needs.version-bump.outputs.is_version_bump_commit == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read

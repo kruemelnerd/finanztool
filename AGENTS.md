@@ -144,6 +144,15 @@ All commands below assume current directory is repository root.
 - Cucumber features live in `src/test/resources/features/` with glue under `de.kruemelnerd.finanzapp.cucumber`.
 - Playwright tests run headless and are used for end-to-end UI verification.
 
+## Versioning and release automation
+- Every push to `main` must trigger an automatic version bump commit in `pom.xml` before publishing a release.
+- Bump level is determined automatically from commit messages in the pushed range (`before..HEAD`):
+  - `major` if any commit contains `BREAKING CHANGE:` or a Conventional Commit header with `!` (for example `feat!:` or `refactor(scope)!:`).
+  - `minor` if any commit header matches `feat:` / `feat(scope):` and no major signal exists.
+  - `patch` for all other changes.
+- Release publication must run only on the generated version-bump commit to ensure released artifacts use the bumped version.
+- Auto-generated bump commits use the message pattern `chore(release): bump version to <version> (<level>)`; this marker is used to prevent bump loops.
+
 ## Communication preferences
 - Always communicate with the user in German.
 
