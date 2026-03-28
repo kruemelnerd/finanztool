@@ -200,12 +200,24 @@ jobs:
       - name: Build release artifact
         run: mvn -B -DskipTests package
 
+      - name: Compute JReleaser metadata
+        id: release-meta
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PROJECT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
+          echo "project_version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
+          echo "commit_short_hash=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
       - name: Run JReleaser
         uses: jreleaser/release-action@90ac653bb9c79d11179e65d81499f3f34527dcd5
         with:
           setup-java: false
         env:
           JRELEASER_GITHUB_TOKEN: ${{ github.token }}
+          JRELEASER_PROJECT_VERSION: ${{ steps.release-meta.outputs.project_version }}
+          JRELEASER_COMMIT_SHORT_HASH: ${{ steps.release-meta.outputs.commit_short_hash }}
 
       - name: Upload JReleaser logs
         if: always()
