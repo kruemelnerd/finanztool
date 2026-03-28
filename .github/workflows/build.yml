@@ -45,6 +45,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       is_version_bump_commit: ${{ steps.gate.outputs.is_version_bump_commit }}
+      should_release: ${{ steps.release-target.outputs.should_release }}
+      release_sha: ${{ steps.release-target.outputs.release_sha }}
     permissions:
       contents: write
     concurrency:
@@ -191,6 +193,7 @@ jobs:
 
       - name: Commit and push version bump
         if: steps.gate.outputs.is_version_bump_commit != 'true'
+        id: bump-push
         env:
           BUMP_LEVEL: ${{ steps.version.outputs.bump_level }}
           NEXT_VERSION: ${{ steps.version.outputs.next }}
@@ -200,6 +203,7 @@ jobs:
 
           if git diff --quiet -- pom.xml; then
             echo "No version change to commit."
+            echo "bumped_sha=" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -207,13 +211,39 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -m "chore(release): bump version to ${NEXT_VERSION} (${BUMP_LEVEL})"
           git push origin HEAD:main
+          echo "bumped_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Determine release target
+        id: release-target
+        env:
+          BUMPED_SHA: ${{ steps.bump-push.outputs.bumped_sha }}
+          HEAD_SHA: ${{ github.sha }}
+          IS_VERSION_BUMP_COMMIT: ${{ steps.gate.outputs.is_version_bump_commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ "$IS_VERSION_BUMP_COMMIT" = "true" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "release_sha=$HEAD_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ -n "$BUMPED_SHA" ]; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+            echo "release_sha=$BUMPED_SHA" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "should_release=false" >> "$GITHUB_OUTPUT"
+          echo "release_sha=" >> "$GITHUB_OUTPUT"
 
   release:
     name: Build and publish release
     needs:
       - build
       - version-bump
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.version-bump.result == 'success' && needs.version-bump.outputs.is_version_bump_commit == 'true' }}
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.result == 'success' && needs.version-bump.result == 'success' && needs.version-bump.outputs.should_release == 'true' }}
     runs-on: ubuntu-latest
     permissions:
       actions: read
@@ -231,7 +261,7 @@ jobs:
 
       - name: Validate and check out trusted commit
         env:
-          HEAD_SHA: ${{ github.sha }}
+          HEAD_SHA: ${{ needs.version-bump.outputs.release_sha }}
         shell: bash
         run: |
           set -euo pipefail
@@ -249,6 +279,12 @@ jobs:
       - name: Build release artifact
         run: mvn -B -DskipTests package
 
+      - name: Generate artifact attestation
+        uses: actions/attest@v4
+        with:
+          subject-path: target/*.jar
+
+
       - name: Compute JReleaser metadata
         id: release-meta
         shell: bash
@@ -256,7 +292,8 @@ jobs:
           set -euo pipefail
 
           PROJECT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
-          RELEASE_TAG="release-${PROJECT_VERSION}-${GITHUB_SHA::7}"
+          RELEASE_SHA_SHORT="$(git rev-parse --short HEAD)"
+          RELEASE_TAG="release-${PROJECT_VERSION}-${RELEASE_SHA_SHORT}"
 
           echo "project_version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
