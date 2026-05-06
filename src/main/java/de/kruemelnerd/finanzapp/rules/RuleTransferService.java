@@ -9,8 +9,6 @@ import de.kruemelnerd.finanzapp.repository.CategoryRepository;
 import de.kruemelnerd.finanzapp.repository.RuleRepository;
 import de.kruemelnerd.finanzapp.repository.UserRepository;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,6 +24,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 @Service
 public class RuleTransferService {
@@ -95,7 +95,7 @@ public class RuleTransferService {
     ExportPayload payload = new ExportPayload(EXPORT_FORMAT, Instant.now(), groups);
     try {
       return Optional.of(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(payload));
-    } catch (JsonProcessingException ex) {
+    } catch (JacksonException ex) {
       throw new IllegalStateException("Could not serialize rules export", ex);
     }
   }
@@ -114,7 +114,7 @@ public class RuleTransferService {
     ImportPayload payload;
     try {
       payload = objectMapper.readValue(file.getBytes(), ImportPayload.class);
-    } catch (IOException ex) {
+    } catch (IOException | JacksonException ex) {
       return new ImportResult(ImportStatus.INVALID_JSON, 0, 0, null);
     }
 

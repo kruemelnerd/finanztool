@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>3.4.2</version>
+    <version>4.0.6</version>
     <relativePath/>
   </parent>
 
@@ -19,6 +19,8 @@
 
   <properties>
     <java.version>21</java.version>
+    <byte-buddy-agent.version>1.18.8</byte-buddy-agent.version>
+    <cucumber.version>7.34.3</cucumber.version>
     <sonar.organization>kruemelnerd</sonar.organization>
     <sonar.coverage.jacoco.xmlReportPaths>${project.reporting.outputDirectory}/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
   </properties>
@@ -51,7 +53,7 @@
     <dependency>
       <groupId>org.xerial</groupId>
       <artifactId>sqlite-jdbc</artifactId>
-      <version>3.53.0.0</version>
+      <version>3.53.1.0</version>
     </dependency>
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -69,6 +71,11 @@
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-devtools</artifactId>
       <scope>runtime</scope>
       <optional>true</optional>
@@ -76,7 +83,7 @@
     <dependency>
       <groupId>net.bytebuddy</groupId>
       <artifactId>byte-buddy-agent</artifactId>
-      <version>1.15.11</version>
+      <version>${byte-buddy-agent.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -87,25 +94,24 @@
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-java</artifactId>
-      <version>7.34.3</version>
+      <version>${cucumber.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-spring</artifactId>
-      <version>7.34.3</version>
+      <version>${cucumber.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-junit-platform-engine</artifactId>
-      <version>7.20.1</version>
+      <version>${cucumber.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.platform</groupId>
       <artifactId>junit-platform-suite</artifactId>
-      <version>1.10.2</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -147,7 +153,7 @@
         <configuration>
           <forkCount>1C</forkCount>
           <reuseForks>true</reuseForks>
-          <argLine>@{argLine} -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/1.15.11/byte-buddy-agent-1.15.11.jar</argLine>
+          <argLine>@{argLine} -javaagent:${settings.localRepository}/net/bytebuddy/byte-buddy-agent/${byte-buddy-agent.version}/byte-buddy-agent-${byte-buddy-agent.version}.jar</argLine>
           <systemPropertyVariables>
             <spring.datasource.url>jdbc:sqlite:${project.build.directory}/test-finanzapp-${surefire.forkNumber}.db</spring.datasource.url>
           </systemPropertyVariables>

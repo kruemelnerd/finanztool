@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import de.kruemelnerd.finanzapp.domain.BalanceDaily;
@@ -199,7 +198,7 @@ public class WebSteps {
   public void iAmRedirectedToLogin() throws Exception {
     lastAction
         .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("**/login"));
+        .andExpect(redirectedUrl("/login"));
   }
 
   @Then("I am redirected to {string}")

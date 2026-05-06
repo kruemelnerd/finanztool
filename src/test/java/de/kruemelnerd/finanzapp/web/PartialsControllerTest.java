@@ -5,7 +5,7 @@ import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import de.kruemelnerd.finanzapp.domain.BalanceDaily;
@@ -21,8 +21,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.test.web.servlet.MockMvc;
 
 @SpringBootTest
@@ -117,7 +117,7 @@ class PartialsControllerTest {
   void balanceChartRedirectsWhenUnauthenticated() throws Exception {
     mockMvc.perform(get("/partials/balance-chart"))
         .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("**/login"));
+        .andExpect(redirectedUrl("/login"));
   }
 
   @Test

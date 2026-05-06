@@ -15,7 +15,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import de.kruemelnerd.finanzapp.importcsv.CsvImportException;
@@ -42,11 +41,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.multipart.MultipartFile;
@@ -77,10 +76,10 @@ class PagesControllerTest {
   @Autowired
   private RuleRepository ruleRepository;
 
-  @MockBean
+  @MockitoBean
   private CsvUploadService csvUploadService;
 
-  @MockBean
+  @MockitoBean
   private DataDeletionService dataDeletionService;
 
   @Test
@@ -101,7 +100,7 @@ class PagesControllerTest {
   void rootRedirectsWhenUnauthenticated() throws Exception {
     mockMvc.perform(get("/"))
         .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("**/login"));
+        .andExpect(redirectedUrl("/login"));
   }
 
   @Test
@@ -115,7 +114,7 @@ class PagesControllerTest {
   void overviewRedirectsWhenUnauthenticated() throws Exception {
     mockMvc.perform(get("/overview"))
         .andExpect(status().is3xxRedirection())
-        .andExpect(redirectedUrlPattern("**/login"));
+        .andExpect(redirectedUrl("/login"));
   }
 
   @Test
@@ -1116,7 +1115,7 @@ class PagesControllerTest {
           "parentId", parentId,
           "subcategoryIds", childIdsByParent.getOrDefault(parentId, java.util.List.of())));
     }
-    String payload = new com.fasterxml.jackson.databind.ObjectMapper()
+    String payload = new tools.jackson.databind.ObjectMapper()
         .writeValueAsString(Map.of("parents", parentCommands));
 
     mockMvc.perform(post("/categories/reorder")
