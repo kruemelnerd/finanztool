@@ -19,7 +19,7 @@
 
   <properties>
     <java.version>21</java.version>
-    <byte-buddy-agent.version>1.18.8</byte-buddy-agent.version>
+    <byte-buddy-agent.version>1.18.10</byte-buddy-agent.version>
     <cucumber.version>7.34.3</cucumber.version>
     <sonar.organization>kruemelnerd</sonar.organization>
     <sonar.coverage.jacoco.xmlReportPaths>${project.reporting.outputDirectory}/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
