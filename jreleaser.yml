@@ -20,7 +20,7 @@ release:
     owner: kruemelnerd
     name: finanztool
     branch: main
-    overwrite: true
+    overwrite: false
     makeLatest: true
     changelog:
       formatted: ALWAYS
