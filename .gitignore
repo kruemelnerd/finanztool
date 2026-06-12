@@ -1,3 +1,10 @@
+# local graphify artifacts
+graphify-out/cost.json
+graphify-out/cache/
+graphify-out/.graphify_python
+graphify-out/chunks/
+src/graphify-out/
+
 
 # Created by https://www.toptal.com/developers/gitignore/api/windows,linux,intellij,microsoftoffice,git,java,web
 # Edit at https://www.toptal.com/developers/gitignore?templates=windows,linux,intellij,microsoftoffice,git,java,web

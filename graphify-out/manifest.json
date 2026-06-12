@@ -1,0 +1,486 @@
+{
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/db/migration/V6__BackfillTransactionBookingComponents.java": {
+    "mtime": 1770546908.8020566,
+    "hash": "cf9e47bd379fa1f8f8179ba4b5e6eac9"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/db/migration/V10__NormalizeCategoryBooleanColumns.java": {
+    "mtime": 1771580934.055249,
+    "hash": "b75ee1c91e22f680023bf4fa949069ef"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/FinanzappApplication.java": {
+    "mtime": 1772187583.5996382,
+    "hash": "b80ce74753828d6fe7c23e918fd5b948"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/balance/BalanceService.java": {
+    "mtime": 1772187583.3216748,
+    "hash": "881e55fc28d278a39284a7d2caf14601"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/balance/AccountBalanceService.java": {
+    "mtime": 1772187583.6136363,
+    "hash": "604e4e4d2e7b0b1c4f49bfc15d6366f2"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/balance/BalancePoint.java": {
+    "mtime": 1772187583.5536442,
+    "hash": "f3ebf72ecd8b4bb0bbfd6832ff867d9a"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/categories/CategoryManagementService.java": {
+    "mtime": 1772187583.5316472,
+    "hash": "ea4d7557e72b86da1682d052852cdc46"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/categories/CategoryBootstrapService.java": {
+    "mtime": 1772187582.6107688,
+    "hash": "3bdc63059b353b4fdfb6694e645c4be7"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/categories/CategoriesController.java": {
+    "mtime": 1772187583.0217144,
+    "hash": "b171d4436030512030022502ff09167c"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/categories/CategoryTransferService.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "7fbf98befd23bd0dd7405db103da49f6"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionPage.java": {
+    "mtime": 1772187582.489785,
+    "hash": "04f22e6022da6a1f1794e96f53e8fced"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionViewService.java": {
+    "mtime": 1772187583.2716815,
+    "hash": "466d6b8d6e7e135d31984a0b1d4f99ce"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionCategoryOption.java": {
+    "mtime": 1772187583.1556969,
+    "hash": "087865eabc765e8131aa1a125818650c"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionRow.java": {
+    "mtime": 1772187583.7946124,
+    "hash": "cfcce77d2590538cee9c8cec4745800d"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionsController.java": {
+    "mtime": 1772189479.3221014,
+    "hash": "c3c3c1ab8c712373de01e910be01bff1"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/transactions/TransactionFilterRequest.java": {
+    "mtime": 1772189207.477085,
+    "hash": "72e14cec0018c99c384d6dbb522a3d91"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportException.java": {
+    "mtime": 1772187582.8727343,
+    "hash": "f3a1022bd0c79a5fa5b4db9b6ba4306f"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportService.java": {
+    "mtime": 1772457322.602652,
+    "hash": "fa3b7d30dd57114895a405185cf1d97b"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvParsingResult.java": {
+    "mtime": 1772187583.086706,
+    "hash": "a72d3ce8902dd1770b9062bc4d10f161"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvUploadService.java": {
+    "mtime": 1772187582.97972,
+    "hash": "0da0569746fde76f5cb908d042d84a82"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportFlashService.java": {
+    "mtime": 1772189221.0485349,
+    "hash": "db0cb27968e057dda68c1c807bd7056e"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvImportResult.java": {
+    "mtime": 1772187582.45079,
+    "hash": "50aafae3bcb3aaeaf79a02589e9b0ef9"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/importcsv/CsvParser.java": {
+    "mtime": 1772187583.1446984,
+    "hash": "a97e6c0e81150b50c85dda310c482dac"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/partials/PartialsController.java": {
+    "mtime": 1772189305.657945,
+    "hash": "a00334a158472b46703522f07cc44595"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/BalanceDaily.java": {
+    "mtime": 1772187583.5676425,
+    "hash": "465098035d1ca286ac191b1a65be352d"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/Rule.java": {
+    "mtime": 1772187582.8987308,
+    "hash": "5ffbf1328bc35d2890eb751601d9a039"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/RuleMatchField.java": {
+    "mtime": 1772187583.8226087,
+    "hash": "4ca3e4f87c37dea8dbd5cc2babc79c69"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/CsvArtifact.java": {
+    "mtime": 1772187583.8526049,
+    "hash": "303ee7560250ae1e7aa1bddd0da2e0d3"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/Transaction.java": {
+    "mtime": 1772187583.6446323,
+    "hash": "3264088135ddf93113b8633aebfb9b2a"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/Category.java": {
+    "mtime": 1772187583.0327132,
+    "hash": "e4e0005800cec8f6626969476fca1188"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/CategoryAssignedBy.java": {
+    "mtime": 1772187582.9647222,
+    "hash": "133f396bd51913789c2b2b5f810dd165"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/domain/User.java": {
+    "mtime": 1772187583.6566308,
+    "hash": "97be0d391064868161cff679af2f81c0"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/UserRepository.java": {
+    "mtime": 1772187583.1816933,
+    "hash": "8b0413b3085782123f45e15d5f88f8a8"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/BalanceDailyRepository.java": {
+    "mtime": 1772187583.124701,
+    "hash": "ad8a0edbe9ec845bf4db1b3d4bbf22f2"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/TransactionRepository.java": {
+    "mtime": 1772187582.8267403,
+    "hash": "a8ec5d0bfdcf63995067c063224e99f0"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/RuleRepository.java": {
+    "mtime": 1772187583.0447116,
+    "hash": "69aa9a728793b9f602dabba2d4c64757"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/CsvArtifactRepository.java": {
+    "mtime": 1772187583.7366202,
+    "hash": "74ed8b05886127a4637983577c32ee36"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/repository/CategoryRepository.java": {
+    "mtime": 1772187583.0577097,
+    "hash": "e3fd40bef874c6a8192eade5d7eaac8b"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/dashboard/OverviewController.java": {
+    "mtime": 1772189237.3420508,
+    "hash": "961a1cf105e67f4a2d5471a5576ec7ce"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/auth/AuthController.java": {
+    "mtime": 1772187583.6696289,
+    "hash": "9abd6ca10c6b78512b704234c67e88c7"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/auth/DatabaseUserDetailsService.java": {
+    "mtime": 1772187583.2056901,
+    "hash": "915122eb87a3718d6f5c946c5b9d6ce8"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/auth/RegistrationForm.java": {
+    "mtime": 1772187583.3906658,
+    "hash": "af92d9b49632414eaef80a42c5f76352"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/auth/RegistrationService.java": {
+    "mtime": 1772187583.7116234,
+    "hash": "0486c98e6cf5b688460d04afea522272"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/reports/SankeyReportService.java": {
+    "mtime": 1772187583.351671,
+    "hash": "336cc102085478f980179390a66194d6"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/reports/SankeyController.java": {
+    "mtime": 1772187583.8116102,
+    "hash": "e9e730990c8227a7eabfac9a575254b5"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/RuleManagementService.java": {
+    "mtime": 1772187583.8406065,
+    "hash": "44242f7522aceadf6ffd5fd62a4a72fd"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/RulesController.java": {
+    "mtime": 1772187583.776615,
+    "hash": "8f5d656469afb90bc50044142d70d8c4"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/RuleTransferService.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "cf3a5d14cde9dd2d7371a806e920b581"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/CategoryAssignmentService.java": {
+    "mtime": 1772187583.8646033,
+    "hash": "2949e700fea8fb9f9b3de30b1e978cff"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/RuleTextNormalizer.java": {
+    "mtime": 1772187582.5837724,
+    "hash": "6e838fb2b8850e182ed077a3d561630f"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/rules/RuleEngine.java": {
+    "mtime": 1772187582.67776,
+    "hash": "baa0c6d075d876a3e8a44b1275e940d4"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/settings/DataDeletionService.java": {
+    "mtime": 1772187583.5116498,
+    "hash": "4974c35436ff08d9b27176011a31ecf0"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/settings/SettingsController.java": {
+    "mtime": 1772189252.705514,
+    "hash": "d77f23920a51d0851169c26407f9d229"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/common/web/UploadExceptionHandler.java": {
+    "mtime": 1772187583.3046772,
+    "hash": "e8bb19f18615e34724f457d9889ad43b"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/common/config/LocaleConfig.java": {
+    "mtime": 1772187583.6806276,
+    "hash": "d174221eca2a899454ab17ebb5338f95"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/java/de/kruemelnerd/finanzapp/common/config/SecurityConfig.java": {
+    "mtime": 1772187583.7256215,
+    "hash": "3f955f551e88e183cd2a0484dcecc504"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V1__create_users.sql": {
+    "mtime": 1770310198.9924629,
+    "hash": "3d21a3a7c78a27d86410d21dd39a5335"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V8__create_rules.sql": {
+    "mtime": 1771577683.5579226,
+    "hash": "42d8197ce230853b4c39407620a32cfc"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V3__create_csv_artifacts.sql": {
+    "mtime": 1770310341.026951,
+    "hash": "efbe16b41a413d0a4e135c8557e3009a"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V4__create_balance_daily.sql": {
+    "mtime": 1770310252.341736,
+    "hash": "f86eb491407e5eb93f3ab49e5e7a91de"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V7__create_categories.sql": {
+    "mtime": 1771577677.413893,
+    "hash": "9a0d9dd9ca043aefbd62572d3d36305d"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V5__add_transaction_booking_components.sql": {
+    "mtime": 1770546320.7801485,
+    "hash": "7de16722b3e42715dc9be74f236b7a49"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V2__create_transactions.sql": {
+    "mtime": 1770310337.5388618,
+    "hash": "bd2b9d882a68913fd78ac4207139c324"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/db/migration/V9__alter_transactions_add_categories.sql": {
+    "mtime": 1771577688.7889478,
+    "hash": "7e6373d4733552822033382a32281452"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/balance/BalanceServiceTest.java": {
+    "mtime": 1772187582.9527237,
+    "hash": "2fa7d8055674b5280ee3358d8c430aca"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/balance/AccountBalanceServiceTest.java": {
+    "mtime": 1772187583.472655,
+    "hash": "c54542ad7844d72df76b1ba1413ad778"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/categories/CategoryTransferServiceTest.java": {
+    "mtime": 1778095681.5270033,
+    "hash": "8687adb5ee46b8ece185c8474af3a9c3"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/categories/CategoryBootstrapServiceIntegrationTest.java": {
+    "mtime": 1772187582.745751,
+    "hash": "397374d6278f9ff78fe747d2d5ee8082"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/transactions/TransactionViewServiceTest.java": {
+    "mtime": 1772187583.2246878,
+    "hash": "fe00be41b25ead1d8140339c9bd1e1a1"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/importcsv/CsvParserTest.java": {
+    "mtime": 1772187582.9327264,
+    "hash": "952183b0cb46c4801022ca73ac019b75"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/importcsv/CsvImportServiceTest.java": {
+    "mtime": 1772458469.55029,
+    "hash": "d1d83b3072b88bda28532c52c51d47b2"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/importcsv/CsvUploadServiceTest.java": {
+    "mtime": 1772187583.6276345,
+    "hash": "48be56859d6a4d50b2b766caed352d28"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/web/PartialsControllerTest.java": {
+    "mtime": 1778094279.9027774,
+    "hash": "036ad4f9f41bed09b79973323384fe60"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/web/PagesControllerTest.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "8abe5c692a226f38699051b6ca7bbb43"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/repository/TransactionRepositoryIntegrationTest.java": {
+    "mtime": 1772187582.5607755,
+    "hash": "a223f1655fe8d33401096071421704e1"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/repository/UserRepositoryIntegrationTest.java": {
+    "mtime": 1772187582.789745,
+    "hash": "b5accd83238ddff6f24490dad7a122ef"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/repository/RepositoryIntegrationTestBase.java": {
+    "mtime": 1772187582.9927185,
+    "hash": "8be9f3bb47d14b9727acd8c383cb1d96"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/repository/BalanceDailyRepositoryIntegrationTest.java": {
+    "mtime": 1772187582.5277798,
+    "hash": "2ff893c6045561ee3dab9225d7796759"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/repository/CsvArtifactRepositoryIntegrationTest.java": {
+    "mtime": 1772187582.9157286,
+    "hash": "577583e6be7e5373841b75d2939a76da"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/dashboard/OverviewControllerTest.java": {
+    "mtime": 1772190624.3551288,
+    "hash": "0cd2167c05e62dd078bc983879c9395e"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/auth/RegistrationServiceTest.java": {
+    "mtime": 1772187583.1007042,
+    "hash": "1903e77addd86da602924f0865e0c2e3"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/e2e/PlaywrightE2ETest.java": {
+    "mtime": 1772275351.6863961,
+    "hash": "50550edb53504db7452c428432496b57"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/rules/RuleEngineTest.java": {
+    "mtime": 1772187583.1127026,
+    "hash": "24c85dbc29e1a813e5567c1d3ce147f0"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/rules/RuleTextNormalizerTest.java": {
+    "mtime": 1772187582.860736,
+    "hash": "b0a5d4165f6c2f0f8a2650a276ed81b8"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/rules/CategoryAssignmentServiceTest.java": {
+    "mtime": 1772187582.843738,
+    "hash": "30ecd3f08bee103951e5228f9e2af1fd"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/rules/RuleTransferServiceTest.java": {
+    "mtime": 1778095681.5330033,
+    "hash": "a4d675e76a6f0a43a12201d87c34be2d"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/settings/DataDeletionServiceTest.java": {
+    "mtime": 1772187583.5816405,
+    "hash": "7a319bb89ff1279fc1e031605f8f8bef"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/settings/DataDeletionServiceIntegrationTest.java": {
+    "mtime": 1772187583.1686952,
+    "hash": "3acc6284bbdf53734c8d4351d99e2574"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/cucumber/CucumberSpringConfiguration.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "f2b4461a4d230de1c6570483f7c34958"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/cucumber/CucumberTest.java": {
+    "mtime": 1772189313.5291371,
+    "hash": "d82c6e631dc79a4d411179b7d843ad59"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/cucumber/WebSteps.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "adb4f951521e036f2195a27e081ea2d3"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/cucumber/UiSteps.java": {
+    "mtime": 1772187583.6976252,
+    "hash": "f5b899cad260315c764e44d0cfeaf490"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/common/web/UploadExceptionHandlerTest.java": {
+    "mtime": 1772187583.3686688,
+    "hash": "f3849e7bd92bc10c26dc65006b3c98cd"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/test/java/de/kruemelnerd/finanzapp/common/config/LocaleConfigIntegrationTest.java": {
+    "mtime": 1778094279.9017775,
+    "hash": "63960472197d13186c9fb64460df6f21"
+  },
+  "/home/philipp/Dokumente/code/finanztool/AGENTS.md": {
+    "mtime": 1774728052.6629612,
+    "hash": "a44465a91baf0a37a41111f99b7f6458"
+  },
+  "/home/philipp/Dokumente/code/finanztool/README.md": {
+    "mtime": 1774724163.6513827,
+    "hash": "9e1f513c4fa2bb63e750c896591d2a53"
+  },
+  "/home/philipp/Dokumente/code/finanztool/jreleaser.yml": {
+    "mtime": 1774726380.208924,
+    "hash": "3c4e0698df54aa6a25c9d244a338bb58"
+  },
+  "/home/philipp/Dokumente/code/finanztool/CHANGELOG.md": {
+    "mtime": 1774728086.7262053,
+    "hash": "650a319d2a05d97a012156412864f291"
+  },
+  "/home/philipp/Dokumente/code/finanztool/docs/sdd-traceability.md": {
+    "mtime": 1771574444.5375469,
+    "hash": "027677ba7cf8508c0bba7a11d87d8e31"
+  },
+  "/home/philipp/Dokumente/code/finanztool/docs/github-upload-anleitung.txt": {
+    "mtime": 1772029527.8845942,
+    "hash": "9eeb08b9eac2a1c97dbc1fab83f595df"
+  },
+  "/home/philipp/Dokumente/code/finanztool/docs/project-todo-status.md": {
+    "mtime": 1771605409.2661262,
+    "hash": "857cff5276686d367abac8968f2b140c"
+  },
+  "/home/philipp/Dokumente/code/finanztool/sdd/SDD_Kategorien_Regeln_Sankey.md": {
+    "mtime": 1771573068.4534028,
+    "hash": "7f854fed79165706041893e8495c12f9"
+  },
+  "/home/philipp/Dokumente/code/finanztool/sdd/SDD_Finanzapp_MVP.md": {
+    "mtime": 1771574061.6643116,
+    "hash": "4ee209209174f6015154ab2825c24e05"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/transactions.html": {
+    "mtime": 1771676157.0463057,
+    "hash": "7775d8cb5d3d25a8935bdf78ad6d4400"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/reports-sankey.html": {
+    "mtime": 1771667797.4080765,
+    "hash": "e1f70b91694f2bf6830f69bc10f96079"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/overview.html": {
+    "mtime": 1771574199.8911965,
+    "hash": "6e946563c62eba060b9b0ab9c5431ffa"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/settings.html": {
+    "mtime": 1771167561.4053004,
+    "hash": "d58dc5c8b77c9496fb8912c84017b8c7"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/categories.html": {
+    "mtime": 1771763102.4975991,
+    "hash": "fb3edacb79b44b03dd9ba97a57cb52da"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/register.html": {
+    "mtime": 1771411845.5172098,
+    "hash": "a055e74fc8cda01979dac7ea9ddac7d5"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/login.html": {
+    "mtime": 1771411839.3112302,
+    "hash": "566f8ecba2422be8a0114f9337049ed1"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/layouts/base.html": {
+    "mtime": 1771707024.4008446,
+    "hash": "b4a0d7fd501ba8c74b54d189e7c279b7"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/partials/transactions-table.html": {
+    "mtime": 1771676167.1512616,
+    "hash": "f13c7e5b62743eae6933436bde980f47"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/partials/balance-chart.html": {
+    "mtime": 1771574210.6531394,
+    "hash": "54ba0a5542cf1b6dd4eed441863d7503"
+  },
+  "/home/philipp/Dokumente/code/finanztool/src/main/resources/templates/partials/recent-transactions.html": {
+    "mtime": 1771574867.0429504,
+    "hash": "74b5a7a20efea86cc273c5933d4c2982"
+  },
+  "/home/philipp/Dokumente/code/finanztool/2.png": {
+    "mtime": 1771164859.6468446,
+    "hash": "3cb9e7269acbfba1665bd0e723ede8e9"
+  },
+  "/home/philipp/Dokumente/code/finanztool/1.png": {
+    "mtime": 1771164879.196673,
+    "hash": "3a8549c7cbdfd19c5428193adca8db3d"
+  },
+  "/home/philipp/Dokumente/code/finanztool/docs/images/readme-sankey.png": {
+    "mtime": 1772308315.4994748,
+    "hash": "a9845e0088e3b0a09d997519425ece69"
+  },
+  "/home/philipp/Dokumente/code/finanztool/docs/images/readme-overview.png": {
+    "mtime": 1772308301.1683517,
+    "hash": "e1ca3ab5bb6b2e2236c8d749150471c2"
+  },
+  "/home/philipp/Dokumente/code/finanztool/examples/sankey_example.png": {
+    "mtime": 1771605744.8386493,
+    "hash": "202e2003303056337555316375d44bd4"
+  },
+  "/home/philipp/Dokumente/code/finanztool/examples/Skribble_categories.png": {
+    "mtime": 1771671782.460749,
+    "hash": "b78c68a599c626a11a8c690888253c3c"
+  },
+  "/home/philipp/Dokumente/code/finanztool/examples/Skribble_categories_with_rules.png": {
+    "mtime": 1771703419.5694444,
+    "hash": "e0a7756bd95b7ea3b625c40c83793c16"
+  }
+}
