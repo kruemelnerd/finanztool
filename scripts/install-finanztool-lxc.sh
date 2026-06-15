@@ -22,6 +22,11 @@ set -Eeuo pipefail
 #   chmod +x scripts/install-finanztool-lxc.sh
 #   sudo GH_TOKEN=github_pat_xxx ./scripts/install-finanztool-lxc.sh
 #
+# Benötigte Token-Rechte:
+# - Contents: read-only
+# - Metadata: read-only
+# - Attestations: read-only
+#
 # Alternativ ohne GH_TOKEN:
 #   sudo ./scripts/install-finanztool-lxc.sh
 #
@@ -114,7 +119,10 @@ read_or_store_token() {
 
   if [[ -z "${GH_TOKEN:-}" ]]; then
     echo "Bitte GitHub Fine-grained PAT eingeben."
-    echo "Benötigte Rechte für ${REPO}: Contents read-only, Metadata read-only."
+    echo "Benötigte Rechte für ${REPO}:"
+    echo "  - Contents: read-only"
+    echo "  - Metadata: read-only"
+    echo "  - Attestations: read-only"
     read -r -s -p "GH_TOKEN: " GH_TOKEN
     echo
   fi
@@ -139,6 +147,8 @@ cleanup_old_installation() {
   systemctl reset-failed finanztool-deploy.service 2>/dev/null || true
 
   systemctl stop finanztool.service 2>/dev/null || true
+  systemctl disable finanztool.service 2>/dev/null || true
+  systemctl disable finanztool-deploy.service 2>/dev/null || true
   systemctl reset-failed finanztool.service 2>/dev/null || true
 
   rm -f "$APP_SERVICE" "$DEPLOY_SERVICE" "$DEPLOY_TIMER"
@@ -212,8 +222,20 @@ EOF
 create_user_and_directories() {
   log "User und Verzeichnisse anlegen"
 
+  if ! getent group "$APP_GROUP" >/dev/null 2>&1; then
+    groupadd --system "$APP_GROUP"
+  fi
+
   if ! id "$APP_USER" >/dev/null 2>&1; then
-    useradd --system --home "$DATA_DIR" --shell /usr/sbin/nologin "$APP_USER"
+    useradd \
+      --system \
+      --gid "$APP_GROUP" \
+      --home-dir "$DATA_DIR" \
+      --no-create-home \
+      --shell /usr/sbin/nologin \
+      "$APP_USER"
+  else
+    usermod --gid "$APP_GROUP" "$APP_USER"
   fi
 
   mkdir -p "$RELEASES_DIR" "$DATA_DIR" "$STATE_DIR" "$BACKUP_DIR"
@@ -290,6 +312,15 @@ mkdir -p "$RELEASES_DIR" "$STATE_DIR" "$BACKUP_DIR" "$TMP_BASE"
 exec 9>"$LOCK_FILE"
 flock -n 9 || exit 0
 
+ENV_FILE="/etc/github-deploy/finanztool.env"
+
+if [[ -f "$ENV_FILE" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "$ENV_FILE"
+  set +a
+fi
+
 export GH_TOKEN="${GH_TOKEN:?GH_TOKEN is missing}"
 
 TAG="$(
@@ -304,9 +335,47 @@ if [[ -z "$TAG" ]]; then
   exit 1
 fi
 
+smoke_test() {
+  for i in {1..30}; do
+    if curl -fsS -o /dev/null "http://127.0.0.1:8080/login"; then
+      return 0
+    fi
+
+    if curl -fsS -o /dev/null "http://127.0.0.1:8080/"; then
+      return 0
+    fi
+
+    sleep 1
+  done
+
+  return 1
+}
+
 if [[ -f "$STATE_DIR/current-tag" ]] && [[ "$(cat "$STATE_DIR/current-tag")" == "$TAG" ]]; then
   echo "Already deployed: $TAG"
-  exit 0
+
+  EXPECTED_TARGET="$RELEASES_DIR/$TAG"
+  CURRENT_TARGET="$(readlink -f "$INSTALL_DIR/current" || true)"
+
+  if [[ "$CURRENT_TARGET" == "$EXPECTED_TARGET" && -f "$EXPECTED_TARGET/app.jar" ]]; then
+    echo "Ensuring $SERVICE is running and healthy"
+
+    if systemctl is-active --quiet "$SERVICE" && smoke_test; then
+      echo "Service is already running and healthy."
+      exit 0
+    fi
+
+    echo "Service is not healthy or not running. Restarting existing deployment."
+
+    if systemctl restart "$SERVICE" && smoke_test; then
+      echo "Existing deployment is healthy again."
+      exit 0
+    fi
+
+    echo "Existing deployment is still unhealthy. Re-deploying $TAG."
+  else
+    echo "State says $TAG is deployed, but current symlink or app.jar is invalid. Re-deploying."
+  fi
 fi
 
 WORKDIR="$(mktemp -d "$TMP_BASE/$TAG.XXXXXX")"
@@ -402,21 +471,11 @@ fi
 
 echo "Running smoke test"
 
-for i in {1..30}; do
-  if curl -fsS -o /dev/null "http://127.0.0.1:8080/login"; then
-    echo "$TAG" > "$STATE_DIR/current-tag"
-    echo "Deployment successful: $TAG"
-    exit 0
-  fi
-
-  if curl -fsS -o /dev/null "http://127.0.0.1:8080/"; then
-    echo "$TAG" > "$STATE_DIR/current-tag"
-    echo "Deployment successful: $TAG"
-    exit 0
-  fi
-
-  sleep 1
-done
+if smoke_test; then
+  echo "$TAG" > "$STATE_DIR/current-tag"
+  echo "Deployment successful: $TAG"
+  exit 0
+fi
 
 rollback
 exit 1
@@ -474,6 +533,8 @@ enable_and_first_deploy() {
   log "Ersten verifizierten Deploy ausführen"
 
   systemctl start finanztool-deploy.service
+
+  systemctl enable finanztool.service
 
   log "Status prüfen"
 
