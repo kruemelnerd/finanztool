@@ -32,6 +32,7 @@ The format is based on Keep a Changelog.
 - Release job now injects `JRELEASER_PROJECT_VERSION`, `JRELEASER_TAG_NAME`, and `JRELEASER_RELEASE_NAME`, while `jreleaser.yml` uses those injected values instead of unresolved hash templates.
 - GitHub Actions pins were updated to Node24-ready revisions (`actions/checkout`, `actions/setup-java`, `actions/cache`, `actions/upload-artifact`) to remove Node20 deprecation warnings.
 - Auto-merge workflow now supports an optional `AUTOMERGE_TOKEN` secret for Dependabot PRs that modify files under `.github/workflows/`.
+- GitHub releases now use immutable JReleaser publishing with semantic tags `v<version>` instead of commit-hash-based `release-*` tags.
 
 ### Fixed
 
