@@ -94,8 +94,7 @@ jobs:
           set -euo pipefail
 
           PROJECT_VERSION="$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)"
-          RELEASE_SHA_SHORT="$(git rev-parse --short HEAD)"
-          RELEASE_TAG="release-${PROJECT_VERSION}-${RELEASE_SHA_SHORT}"
+          RELEASE_TAG="v${PROJECT_VERSION}"
 
           echo "project_version=$PROJECT_VERSION" >> "$GITHUB_OUTPUT"
           echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
