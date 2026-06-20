@@ -1,4 +1,4 @@
-name: Auto Merge Dependabot PRs
+name: Auto Merge Renovate PRs
 
 on:
   workflow_run:
@@ -13,7 +13,7 @@ concurrency:
 
 jobs:
   auto-merge:
-    name: Merge Dependabot PR after successful checks
+    name: Merge Renovate or release PR after successful checks
     if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_repository.full_name == github.repository && github.event.workflow_run.head_repository.fork == false }}
     runs-on: ubuntu-latest
     permissions:
@@ -38,8 +38,39 @@ jobs:
           fi
 
           AUTHOR_LOGIN="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json author --jq '.author.login')"
-          if [ "$AUTHOR_LOGIN" != "app/dependabot" ] && [ "$AUTHOR_LOGIN" != "dependabot[bot]" ]; then
-            echo "Skipping PR #$PR_NUMBER because author is $AUTHOR_LOGIN."
+          HEAD_REF="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json headRefName --jq '.headRefName')"
+          PR_TITLE="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json title --jq '.title')"
+          AUTOMERGE_LABEL_COUNT="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json labels --jq '[.labels[] | select(.name == "renovate-automerge")] | length')"
+
+          IS_RENOVATE_PR="false"
+          case "$HEAD_REF" in
+            renovate/*)
+              IS_RENOVATE_PR="true"
+              ;;
+          esac
+
+          if [ "$AUTHOR_LOGIN" = "renovate[bot]" ] || [ "$AUTHOR_LOGIN" = "app/renovate" ]; then
+            IS_RENOVATE_PR="true"
+          fi
+
+          IS_RELEASE_BUMP_PR="false"
+          case "$HEAD_REF" in
+            release-bump/*)
+              IS_RELEASE_BUMP_PR="true"
+              ;;
+          esac
+
+          if printf '%s' "$PR_TITLE" | grep -Eq '^chore\(release\): bump version to [0-9]+\.[0-9]+\.[0-9]+ \(patch\)$'; then
+            IS_RELEASE_BUMP_PR="true"
+          fi
+
+          if [ "$IS_RENOVATE_PR" = "false" ] && [ "$IS_RELEASE_BUMP_PR" = "false" ]; then
+            echo "Skipping PR #$PR_NUMBER because it is neither a Renovate PR nor a release bump PR."
+            exit 0
+          fi
+
+          if [ "$IS_RENOVATE_PR" = "true" ] && [ "$AUTOMERGE_LABEL_COUNT" -eq 0 ]; then
+            echo "Skipping Renovate PR #$PR_NUMBER because it is not marked for automerge."
             exit 0
           fi
 
@@ -60,6 +91,14 @@ jobs:
               ;;
           esac
 
+          if [ "$IS_RENOVATE_PR" = "true" ]; then
+            WORKFLOW_FILES_CHANGED="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json files --jq '[.files[] | select(.path | startswith(".github/workflows/"))] | length')"
+            if [ "$WORKFLOW_FILES_CHANGED" -gt 0 ] && [ "$HAS_AUTOMERGE_TOKEN" != "true" ]; then
+              echo "Skipping PR #$PR_NUMBER because it changes workflow files and AUTOMERGE_TOKEN is not configured."
+              exit 0
+            fi
+          fi
+
           if [ "$(gh repo view "$REPOSITORY" --json squashMergeAllowed --jq '.squashMergeAllowed')" = "true" ]; then
             MERGE_METHOD="--squash"
           elif [ "$(gh repo view "$REPOSITORY" --json mergeCommitAllowed --jq '.mergeCommitAllowed')" = "true" ]; then
@@ -69,12 +108,6 @@ jobs:
           else
             echo "No merge method is enabled in repository settings."
             exit 1
-          fi
-
-          WORKFLOW_FILES_CHANGED="$(gh pr view "$PR_NUMBER" --repo "$REPOSITORY" --json files --jq '[.files[] | select(.path | startswith(".github/workflows/"))] | length')"
-          if [ "$WORKFLOW_FILES_CHANGED" -gt 0 ] && [ "$HAS_AUTOMERGE_TOKEN" != "true" ]; then
-            echo "Skipping PR #$PR_NUMBER because it changes workflow files and AUTOMERGE_TOKEN is not configured."
-            exit 0
           fi
 
           gh pr merge "$PR_NUMBER" --repo "$REPOSITORY" "$MERGE_METHOD" --delete-branch

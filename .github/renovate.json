@@ -1,0 +1,20 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Europe/Berlin",
+  "schedule": ["* 0-3 * * *"],
+  "minimumReleaseAge": "10 days",
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Label patch updates for automerge",
+      "matchUpdateTypes": ["patch"],
+      "addLabels": ["renovate-automerge"]
+    },
+    {
+      "description": "Label minor updates for automerge",
+      "matchUpdateTypes": ["minor"],
+      "addLabels": ["renovate-automerge"]
+    }
+  ]
+}
