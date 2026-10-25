@@ -47,12 +47,14 @@ Motivation: Die Standardansichten in Bank-Apps reichen oft nicht fuer klare Ents
 
 ## Release-Prozess
 
-- Dependabot prueft taeglich Maven- und GitHub-Actions-Abhaengigkeiten und erstellt bei Updates PRs.
-- Dependabot-PRs werden nach erfolgreichem `Build`-Workflow automatisch gemerged.
-- Wenn ein Dependabot-PR Dateien unter `.github/workflows/` aendert, ist dafuer ein Secret `AUTOMERGE_TOKEN` (PAT mit `repo` + `workflow`) noetig.
-- Bei Dependabot-Updates laeuft nach dem Merge auf `main` der komplette `Build`-Workflow inkl. Tests und Sonar-Analyse.
+- Renovate prueft taeglich Maven- und GitHub-Actions-Abhaengigkeiten und erstellt bei Updates PRs.
+- Renovate-PRs mit dem Label `renovate-automerge` werden nach erfolgreichem `Build`-Workflow automatisch gemerged.
+- Wenn ein Renovate-PR Dateien unter `.github/workflows/` aendert, ist dafuer ein Secret `AUTOMERGE_TOKEN` (PAT mit `repo` + `workflow`) noetig.
+- Renovate-PRs werden erst verarbeitet, wenn die Upstream-Version seit mindestens 10 Tagen veroeffentlicht ist.
+- Nach einem Renovate-Merge auf `main` erzeugt der `Build`-Workflow automatisch einen Patch-Bump-PR.
+- Dieser Patch-Bump-PR wird ebenfalls automatisch gemerged und loest den GitHub Release aus.
 - Auch normale Commits auf `main` triggern immer den kompletten `Build`-Workflow.
-- Ist dieser Lauf erfolgreich, erhoeht der Job `Dependabot Version Bump` im `Build`-Workflow die Version in `pom.xml`, baut das neue Jar und pusht den Versions-Commit.
+- Nur gemergte Renovate-Updates fuehren zu einem automatischen Patch-Release.
 - Der Job `Build and publish release` im `Build`-Workflow erstellt mit JReleaser automatisch einen GitHub Release.
 - JReleaser erzeugt dabei den semantischen Release-Tag `v<version>`, erstellt den Release immutable als Draft->Upload->Publish und fuegt Jar plus Checksummen hinzu.
 - `target/jreleaser/trace.log` und `target/jreleaser/output.properties` werden als Workflow-Artefakte gespeichert.
